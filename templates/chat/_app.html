@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% load strophae %}
+
+{% block body %}
+<div style="height:100vh;display:flex;flex-direction:row;">
+
+  <!-- Sidebar -->
+  <aside style="width:252px;flex:none;display:flex;flex-direction:column;min-height:0;border-right:1px solid #e6e7ea;background:#fbfbfc;">
+    <div style="padding:15px 14px 10px;">
+      <a href="{% url 'home' %}" style="display:flex;align-items:center;gap:10px;margin-bottom:14px;padding:0 4px;text-decoration:none;color:inherit;">
+        <div class="logo-dots">
+          <span style="width:8px;height:8px;background:oklch(0.58 0.15 255);"></span>
+          <span style="width:8px;height:8px;background:oklch(0.58 0.15 310);"></span>
+          <span style="width:8px;height:8px;background:oklch(0.58 0.15 60);"></span>
+          <span style="width:8px;height:8px;background:oklch(0.58 0.15 150);"></span>
+        </div>
+        <span style="font-size:17px;font-weight:600;letter-spacing:-0.025em;">strophae</span>
+      </a>
+      <form method="post" action="{% url 'new_session' %}">
+        {% csrf_token %}
+        <button type="submit" style="display:flex;align-items:center;justify-content:center;gap:7px;width:100%;border:1px solid #e6e7ea;background:#fff;border-radius:10px;padding:10px;font-size:13.5px;font-weight:600;color:#26272b;cursor:pointer;font-family:inherit;">+ {% translate "New session" %}</button>
+      </form>
+    </div>
+
+    <div class="sc-scroll" style="flex:1;overflow-y:auto;min-height:0;padding:4px 8px 12px;">
+      {% if history_empty %}
+        <div style="text-align:center;color:#bcbcc2;font-size:12px;padding:24px 8px;">{% translate "No conversations yet" %}</div>
+      {% endif %}
+      {% for g in conv_groups %}
+        <div style="padding:13px 8px 5px;font-size:10.5px;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;color:#aeaeb4;">{{ g.label }}</div>
+        {% for c in g.items %}
+        <div style="position:relative;margin-bottom:2px;">
+          <a href="{% url 'chat' c.id %}" style="display:flex;flex-direction:column;align-items:stretch;gap:6px;width:100%;text-align:left;border-radius:9px;padding:9px 10px;text-decoration:none;background:{% if c.active %}#eceef2{% else %}transparent{% endif %};">
+            <span style="font-size:13px;font-weight:500;color:#26272b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:16px;">{{ c.title }}</span>
+            <span style="display:flex;align-items:center;gap:7px;">
+              <span style="display:flex;align-items:center;gap:3px;">
+                {% for d in c.dots %}<span style="width:7px;height:7px;border-radius:50%;background:{{ d }};"></span>{% endfor %}
+              </span>
+              <span style="font-size:11px;color:#aeaeb4;">{{ c.meta }}</span>
+            </span>
+          </a>
+          <button hx-post="{% url 'delete_conversation' c.id %}" hx-confirm="{% translate 'Delete this conversation?' %}"
+                  title="{% translate 'Delete conversation' %}"
+                  style="position:absolute;top:8px;right:6px;border:none;background:transparent;color:#c2c2c8;cursor:pointer;font-size:14px;line-height:1;padding:2px;">×</button>
+        </div>
+        {% endfor %}
+      {% endfor %}
+    </div>
+
+    <div x-data="{ menu:false }" @click.outside="menu=false"
+         style="border-top:1px solid #ededef;padding:8px;position:relative;display:flex;flex-direction:column;gap:2px;">
+      {% translate "Connected" as t_connected %}{% translate "Not connected" as t_not_connected %}
+      <a href="{% url 'settings' %}" style="display:flex;align-items:center;gap:9px;width:100%;text-align:left;border-radius:9px;padding:9px 10px;text-decoration:none;background:{% if screen == 'settings' %}#eceef2{% else %}transparent{% endif %};font-size:13px;font-weight:500;color:#3a3b40;">
+        <span style="flex:none;width:8px;height:8px;border-radius:50%;background:#c2c2c8;" x-data x-init="$el.style.background = (localStorage.getItem('strophae.openrouter')? 'oklch(0.62 0.13 150)':'#c2c2c8')"></span>{% translate "Settings" %}
+        <span style="flex:1;"></span>
+        <span style="font-size:11px;color:#aeaeb4;" x-data x-init="$el.textContent = (localStorage.getItem('strophae.openrouter')? '{{ t_connected|escapejs }}':'{{ t_not_connected|escapejs }}')"></span>
+      </a>
+
+      <button @click="menu=!menu" style="display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:none;border-radius:9px;padding:8px 9px;cursor:pointer;background:transparent;font-family:inherit;">
+        <span style="flex:none;width:30px;height:30px;border-radius:50%;background:{{ me_accent }};color:#fff;display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:600;">{{ me.initials }}</span>
+        <span style="flex:1;min-width:0;">
+          <span style="display:block;font-size:13px;font-weight:600;color:#26272b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ me.display_name }}</span>
+          <span style="display:block;font-size:11px;color:#aeaeb4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ me.email }}</span>
+        </span>
+        <span style="flex:none;color:#bcbcc2;font-size:12px;">⌄</span>
+      </button>
+
+      <div x-cloak x-show="menu" class="sc-menu scpop"
+           style="position:absolute;left:8px;right:8px;bottom:56px;z-index:45;">
+        <div style="padding:8px 10px 7px;font-size:11px;color:#aeaeb4;">{% translate "Signed in as" %} <span style="color:#3a3b40;font-weight:500;">{{ me.email }}</span></div>
+        <a href="{% url 'members' %}" style="display:block;border-radius:8px;padding:8px 10px;font-size:13px;color:#26272b;text-decoration:none;">{% translate "Members" %}</a>
+        <div style="height:1px;background:#f0f0f2;margin:5px 6px;"></div>
+        <form method="post" action="{% url 'set_language' %}"
+              style="display:flex;align-items:center;gap:8px;padding:6px 10px;">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{{ request.path }}">
+          <label for="menu-language" style="flex:1;font-size:13px;color:#26272b;">{% translate "Language" %}</label>
+          <select id="menu-language" name="language" onchange="this.form.submit()"
+                  style="border:1px solid #e6e7ea;background:#fafafa;border-radius:8px;padding:5px 8px;font-size:12.5px;color:#3a3b40;cursor:pointer;outline:none;font-family:inherit;">
+            {% get_current_language as CURRENT_LANG %}
+            {% get_available_languages as AVAILABLE_LANGS %}
+            {% get_language_info_list for AVAILABLE_LANGS as language_infos %}
+            {% for l in language_infos %}<option value="{{ l.code }}" {% if l.code == CURRENT_LANG %}selected{% endif %}>{{ l.name_local|capfirst }}</option>{% endfor %}
+          </select>
+        </form>
+        {% if has_others and debug %}
+          <div style="height:1px;background:#f0f0f2;margin:5px 6px;"></div>
+          <div style="padding:4px 10px;font-size:10.5px;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;color:#bcbcc2;">{% translate "Switch account" %}</div>
+          {% for u in other_users %}
+          <form method="post" action="{% url 'switch_user' u.id %}">{% csrf_token %}
+            <button type="submit" style="display:flex;align-items:center;gap:9px;width:100%;text-align:left;border:none;background:transparent;border-radius:8px;padding:7px 10px;cursor:pointer;font-family:inherit;">
+              <span style="flex:none;width:24px;height:24px;border-radius:50%;background:{{ u.accent }};color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;">{{ u.initials }}</span>
+              <span style="flex:1;min-width:0;font-size:13px;color:#26272b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ u.name }}</span>
+            </button>
+          </form>
+          {% endfor %}
+        {% endif %}
+        <div style="height:1px;background:#f0f0f2;margin:5px 6px;"></div>
+        <form method="post" action="{% url 'logout' %}">{% csrf_token %}
+          <button type="submit" style="display:block;width:100%;text-align:left;border:none;background:transparent;border-radius:8px;padding:8px 10px;font-size:13px;color:#c0392b;cursor:pointer;font-family:inherit;">{% translate "Sign out" %}</button>
+        </form>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <div style="flex:1;display:flex;flex-direction:column;min-width:0;min-height:0;">
+    {% block main %}{% endblock %}
+  </div>
+</div>
+{% block overlays %}{% endblock %}
+{% endblock %}

@@ -54,6 +54,8 @@ cover/
 # Translations
 *.mo
 *.pot
+# strophae ships compiled catalogs (no build pipeline compiles at deploy)
+!locale/**/*.mo
 
 # Django stuff:
 *.log

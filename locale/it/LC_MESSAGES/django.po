@@ -1,0 +1,656 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-07-12 21:36+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: it\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: chat/defaults.py:36
+msgid "Simple Jack"
+msgstr "Jack Semplice"
+
+#: chat/defaults.py:39
+msgid ""
+"You are a helpful, neutral assistant. Answer clearly and directly, without a "
+"strong persona of your own."
+msgstr "Sei un assistente neutrale e disponibile. Rispondi in modo chiaro e diretto, senza una forte personalità tua."
+"Sei un assistente neutrale e disponibile. Rispondi in modo chiaro e diretto, "
+"senza una forte personalità tua."
+
+#: chat/tests/test_i18n_defaults.py:31 chat/views.py:56
+#: templates/chat/_app.html:22
+msgid "New session"
+msgstr "Nuova sessione"
+
+#: chat/tests/test_i18n_defaults.py:67 chat/views.py:451
+#, python-format
+msgid "Agent %(n)s"
+msgstr "Agente %(n)s"
+
+#: chat/views.py:72
+msgid "just now"
+msgstr "adesso"
+
+#: chat/views.py:74
+#, python-format
+msgid "%dm ago"
+msgstr "%dm fa"
+
+#: chat/views.py:77
+#, python-format
+msgid "%dh ago"
+msgstr "%dh fa"
+
+#: chat/views.py:80
+msgid "yesterday"
+msgstr "ieri"
+
+#: chat/views.py:82
+#, python-format
+msgid "%dd ago"
+msgstr "%dg fa"
+
+#: chat/views.py:83
+#, python-format
+msgid "%dw ago"
+msgstr "%dsett fa"
+
+#: chat/views.py:89
+msgid "Today"
+msgstr "Oggi"
+
+#: chat/views.py:90
+msgid "Yesterday"
+msgstr "Ieri"
+
+#: chat/views.py:91
+msgid "Previous 7 days"
+msgstr "Ultimi 7 giorni"
+
+#: chat/views.py:92
+msgid "Earlier"
+msgstr "Prima"
+
+#: chat/views.py:263
+msgid "Invalid email or password."
+msgstr "Email o password non validi."
+
+#: chat/views.py:278
+msgid "Fill in name, email and password."
+msgstr "Compila nome, email e password."
+
+#: chat/views.py:280
+msgid "An account with that email already exists."
+msgstr "Esiste già un account con questa email."
+
+#: chat/views.py:339
+msgid "Account switching is disabled."
+msgstr "Il cambio di account è disabilitato."
+
+#: chat/views.py:508
+#, python-format
+msgid "Saved “%(name)s” to library"
+msgstr "“%(name)s” salvato nella libreria"
+
+#: chat/views.py:574 chat/views.py:585
+#, python-format
+msgid "Added “%(name)s” to the session"
+msgstr "“%(name)s” aggiunto alla sessione"
+
+#: chat/views.py:595
+msgid "Already shared"
+msgstr "Già condivisa"
+
+#: chat/views.py:601
+#, python-format
+msgid "Shared “%(name)s” with the team"
+msgstr "“%(name)s” condivisa con il team"
+
+#: chat/views.py:649
+msgid "Only admins can invite members."
+msgstr "Solo gli amministratori possono invitare membri."
+
+#: chat/views.py:653
+msgid "Enter a name and email"
+msgstr "Inserisci nome ed email"
+
+#: chat/views.py:656
+msgid "That email is already a member"
+msgstr "Questa email è già un membro"
+
+#: chat/views.py:664
+#, python-format
+msgid "Invited %(name)s"
+msgstr "Invito inviato a %(name)s"
+
+#: chat/views.py:672
+msgid "Only admins can change roles."
+msgstr "Solo gli amministratori possono cambiare i ruoli."
+
+#: chat/views.py:687
+msgid "Only admins can remove members."
+msgstr "Solo gli amministratori possono rimuovere membri."
+
+#: templates/chat/_app.html:28
+msgid "No conversations yet"
+msgstr "Ancora nessuna conversazione"
+
+#: templates/chat/_app.html:43
+msgid "Delete this conversation?"
+msgstr "Eliminare questa conversazione?"
+
+#: templates/chat/_app.html:44
+msgid "Delete conversation"
+msgstr "Elimina conversazione"
+
+#: templates/chat/_app.html:53 templates/chat/settings.html:19
+msgid "Connected"
+msgstr "Connesso"
+
+#: templates/chat/_app.html:53 templates/chat/settings.html:19
+msgid "Not connected"
+msgstr "Non connesso"
+
+#: templates/chat/_app.html:55 templates/chat/settings.html:4
+#: templates/chat/settings.html:11
+msgid "Settings"
+msgstr "Impostazioni"
+
+#: templates/chat/_app.html:71
+msgid "Signed in as"
+msgstr "Accesso effettuato come"
+
+#: templates/chat/_app.html:72 templates/chat/members.html:4
+#: templates/chat/members.html:11
+msgid "Members"
+msgstr "Membri"
+
+#: templates/chat/_app.html:78 templates/chat/login.html:51
+#: templates/chat/settings.html:53 templates/chat/settings.html:59
+msgid "Language"
+msgstr "Lingua"
+
+#: templates/chat/_app.html:89
+msgid "Switch account"
+msgstr "Cambia account"
+
+#: templates/chat/_app.html:101
+msgid "Sign out"
+msgstr "Esci"
+
+#: templates/chat/chat.html:25 templates/chat/compose.html:21
+msgid "Shared context"
+msgstr "Contesto condiviso"
+
+#: templates/chat/chat.html:28
+msgid "Personas"
+msgstr "Personas"
+
+#: templates/chat/chat.html:29
+msgid "Agent"
+msgstr "Agente"
+
+#: templates/chat/chat.html:31
+msgid "Export"
+msgstr "Esporta"
+
+#: templates/chat/chat.html:33
+msgid "Copy as Markdown"
+msgstr "Copia come Markdown"
+
+#: templates/chat/chat.html:34
+msgid "Download .json"
+msgstr "Scarica .json"
+
+#: templates/chat/chat.html:35
+msgid "Copy share link"
+msgstr "Copia link di condivisione"
+
+#: templates/chat/chat.html:38
+msgid "Edit agents"
+msgstr "Modifica agenti"
+
+#: templates/chat/chat.html:50 templates/chat/partials/agent_card.html:12
+msgid "Model"
+msgstr "Modello"
+
+#: templates/chat/chat.html:58
+msgid "Edit system prompt"
+msgstr "Modifica system prompt"
+
+#: templates/chat/chat.html:59
+msgid "Clear thread"
+msgstr "Svuota il thread"
+
+#: templates/chat/chat.html:61
+msgid "Remove agent"
+msgstr "Rimuovi agente"
+
+#: templates/chat/chat.html:68
+msgid "Waiting for the first prompt"
+msgstr "In attesa del primo prompt"
+
+#: templates/chat/chat.html:89 templates/chat/compose.html:44
+msgid "Add agent"
+msgstr "Aggiungi agente"
+
+#: templates/chat/chat.html:96
+msgid "Message your agent…"
+msgstr "Scrivi al tuo agente…"
+
+#: templates/chat/chat.html:96
+#, python-brace-format
+msgid "Message all {n} agents…"
+msgstr "Scrivi a tutti i {n} agenti…"
+
+#: templates/chat/chat.html:98
+msgid "Message"
+msgstr "Messaggio"
+
+#: templates/chat/chat.html:101
+msgid "Send"
+msgstr "Invia"
+
+#: templates/chat/chat.html:105
+msgid "Sent to 1 agent"
+msgstr "Inviato a 1 agente"
+
+#: templates/chat/chat.html:105
+#, python-brace-format
+msgid "Sent in parallel to {n} agents"
+msgstr "Inviato in parallelo a {n} agenti"
+
+#: templates/chat/chat.html:106
+msgid "Enter to send · Shift+Enter for a new line"
+msgstr "Invio per inviare · Maiusc+Invio per andare a capo"
+
+#: templates/chat/chat.html:121
+msgid ""
+"This defines the agent's role and stays fixed across the whole conversation "
+"— independent of the other agents."
+msgstr "Definisce il ruolo dell'agente e resta fisso per l'intera conversazione — indipendente dagli altri agenti."
+"Definisce il ruolo dell'agente e resta fisso per l'intera conversazione — "
+"indipendente dagli altri agenti."
+
+#: templates/chat/chat.html:122
+msgid "You are…"
+msgstr "Sei…"
+
+#: templates/chat/chat.html:124
+msgid "Done"
+msgstr "Fatto"
+
+#: templates/chat/chat.html:134
+msgid "Connect your OpenRouter key in Settings first"
+msgstr "Collega prima la tua chiave OpenRouter nelle Impostazioni"
+
+#: templates/chat/chat.html:135
+msgid "Could not start the session"
+msgstr "Impossibile avviare la sessione"
+
+#: templates/chat/chat.html:136
+msgid "Copied as Markdown"
+msgstr "Copiato come Markdown"
+
+#: templates/chat/chat.html:137
+msgid "Downloaded session.json"
+msgstr "session.json scaricato"
+
+#: templates/chat/chat.html:138
+msgid "Share link copied"
+msgstr "Link di condivisione copiato"
+
+#: templates/chat/chat.html:139 templates/chat/partials/members_list.html:10
+msgid "You"
+msgstr "Tu"
+
+#: templates/chat/compose.html:5
+msgid "Compose"
+msgstr "Componi"
+
+#: templates/chat/compose.html:14
+msgid "Compose your council"
+msgstr "Componi il tuo consiglio"
+
+#: templates/chat/compose.html:15
+msgid ""
+"One prompt, many minds. Every agent answers in parallel — each keeps its own "
+"context and system prompt. Set them up, then start the conversation."
+msgstr "Un prompt, tante menti. Ogni agente risponde in parallelo — ognuno mantiene il proprio contesto e il proprio system prompt. Configurali, poi avvia la conversazione."
+"Un prompt, tante menti. Ogni agente risponde in parallelo — ognuno mantiene "
+"il proprio contesto e il proprio system prompt. Configurali, poi avvia la "
+"conversazione."
+
+#: templates/chat/compose.html:22
+msgid "applied to every agent"
+msgstr "applicato a ogni agente"
+
+#: templates/chat/compose.html:24
+msgid ""
+"A system prompt all agents receive on top of their own — common background, "
+"rules or reference material."
+msgstr "Un system prompt che tutti gli agenti ricevono in aggiunta al proprio — background comune, regole o materiale di riferimento."
+"Un system prompt che tutti gli agenti ricevono in aggiunta al proprio — "
+"background comune, regole o materiale di riferimento."
+
+#: templates/chat/compose.html:25
+msgid "Shared system prompt — context every agent should know…"
+msgstr "System prompt condiviso — contesto che ogni agente deve conoscere…"
+
+#: templates/chat/compose.html:32
+msgid "Agents"
+msgstr "Agenti"
+
+#: templates/chat/compose.html:33 templates/chat/partials/library_modal.html:80
+msgid "Personas library"
+msgstr "Libreria personas"
+
+#: templates/chat/compose.html:47
+msgid "agent in this session"
+msgstr "agente in questa sessione"
+
+#: templates/chat/compose.html:47
+msgid "agents in this session"
+msgstr "agenti in questa sessione"
+
+#: templates/chat/compose.html:49
+#, python-format
+msgid "%(counter)s agent in this session"
+msgid_plural "%(counter)s agents in this session"
+msgstr[0] "%(counter)s agente in questa sessione"
+msgstr[1] "%(counter)s agenti in questa sessione"
+
+#: templates/chat/compose.html:54
+msgid "Start session"
+msgstr "Avvia sessione"
+
+#: templates/chat/login.html:4 templates/chat/login.html:39
+msgid "Sign in"
+msgstr "Accedi"
+
+#: templates/chat/login.html:24
+msgid "Create your account"
+msgstr "Crea il tuo account"
+
+#: templates/chat/login.html:24
+msgid "Welcome back"
+msgstr "Bentornato"
+
+#: templates/chat/login.html:26
+msgid "Sign in to your parallel-agent workspace."
+msgstr "Accedi al tuo workspace di agenti paralleli."
+
+#: templates/chat/login.html:29
+msgid "Full name"
+msgstr "Nome completo"
+
+#: templates/chat/login.html:31 templates/chat/members.html:23
+msgid "Email"
+msgstr "Email"
+
+#: templates/chat/login.html:32
+msgid "Password"
+msgstr "Password"
+
+#: templates/chat/login.html:39
+msgid "Create account"
+msgstr "Crea account"
+
+#: templates/chat/login.html:43
+msgid "Have an account? Sign in"
+msgstr "Hai già un account? Accedi"
+
+#: templates/chat/login.html:43
+msgid "New here? Create an account"
+msgstr "Sei nuovo? Crea un account"
+
+#: templates/chat/login.html:63
+msgid "Demo accounts — tap to fill"
+msgstr "Account demo — tocca per compilare"
+
+#: templates/chat/login.html:73
+msgid "pwd: demo"
+msgstr "pwd: demo"
+
+#: templates/chat/members.html:9 templates/chat/settings.html:10
+msgid "Back"
+msgstr "Indietro"
+
+#: templates/chat/members.html:12
+#, python-format
+msgid "%(counter)s member"
+msgid_plural "%(counter)s members"
+msgstr[0] "%(counter)s membro"
+msgstr[1] "%(counter)s membri"
+
+#: templates/chat/members.html:14
+msgid ""
+"Everyone in this workspace. Invite teammates and manage their roles — "
+"personas shared to the team are visible to all members."
+msgstr "Tutte le persone in questo workspace. Invita colleghi e gestisci i loro ruoli — le personas condivise con il team sono visibili a tutti i membri."
+"Tutte le persone in questo workspace. Invita colleghi e gestisci i loro "
+"ruoli — le personas condivise con il team sono visibili a tutti i membri."
+
+#: templates/chat/members.html:20
+msgid "Invite a member"
+msgstr "Invita un membro"
+
+#: templates/chat/members.html:22
+msgid "Name"
+msgstr "Nome"
+
+#: templates/chat/members.html:24
+msgid "Invite"
+msgstr "Invita"
+
+#: templates/chat/partials/agent_card.html:5
+msgid "Change colour"
+msgstr "Cambia colore"
+
+#: templates/chat/partials/agent_card.html:9
+msgid "Agent name"
+msgstr "Nome agente"
+
+#: templates/chat/partials/agent_card.html:16
+msgid "Remove"
+msgstr "Rimuovi"
+
+#: templates/chat/partials/agent_card.html:21
+msgid "System prompt — define this agent's role, tone and constraints…"
+msgstr "System prompt — definisci ruolo, tono e vincoli di questo agente…"
+
+#: templates/chat/partials/agent_card.html:28
+msgid "Save as persona"
+msgstr "Salva come persona"
+
+#: templates/chat/partials/library_modal.html:8
+msgid "Persona deleted"
+msgstr "Persona eliminata"
+
+#: templates/chat/partials/library_modal.html:8
+msgid "Removed from shared"
+msgstr "Rimossa dalle condivise"
+
+#: templates/chat/partials/library_modal.html:81
+msgid "saved"
+msgstr "salvate"
+
+#: templates/chat/partials/library_modal.html:85
+msgid "Close"
+msgstr "Chiudi"
+
+#: templates/chat/partials/library_modal.html:91
+msgid "My personas"
+msgstr "Le mie personas"
+
+#: templates/chat/partials/library_modal.html:94
+msgid "Shared with team"
+msgstr "Condivise con il team"
+
+#: templates/chat/partials/library_modal.html:100
+msgid ""
+"Your saved personas — private to you. Add one to this session, or share it "
+"with the team."
+msgstr "Le tue personas salvate — private. Aggiungine una a questa sessione o condividila con il team."
+"Le tue personas salvate — private. Aggiungine una a questa sessione o "
+"condividila con il team."
+
+#: templates/chat/partials/library_modal.html:101
+msgid "No saved personas yet. Save any agent to reuse it later."
+msgstr "Nessuna persona salvata. Salva un agente per riutilizzarlo in seguito."
+
+#: templates/chat/partials/library_modal.html:112
+msgid "Share with team"
+msgstr "Condividi con il team"
+
+#: templates/chat/partials/library_modal.html:113
+msgid "Share"
+msgstr "Condividi"
+
+#: templates/chat/partials/library_modal.html:115
+#: templates/chat/partials/library_modal.html:139
+msgid "Add"
+msgstr "Aggiungi"
+
+#: templates/chat/partials/library_modal.html:116
+msgid "Delete"
+msgstr "Elimina"
+
+#: templates/chat/partials/library_modal.html:124
+msgid ""
+"Personas shared by everyone in the workspace. Anyone can add them to a "
+"session."
+msgstr "Personas condivise da tutti nel workspace. Chiunque può aggiungerle a una sessione."
+"Personas condivise da tutti nel workspace. Chiunque può aggiungerle a una "
+"sessione."
+
+#: templates/chat/partials/library_modal.html:125
+msgid ""
+"Nothing shared yet. Share one of your personas to start the team library."
+msgstr "Ancora nulla di condiviso. Condividi una delle tue personas per avviare la libreria del team."
+"Ancora nulla di condiviso. Condividi una delle tue personas per avviare la "
+"libreria del team."
+
+#: templates/chat/partials/library_modal.html:135
+msgid "shared by"
+msgstr "condivisa da"
+
+#: templates/chat/partials/library_modal.html:140
+msgid "Remove from shared"
+msgstr "Rimuovi dalle condivise"
+
+#: templates/chat/partials/members_list.html:15
+msgid "Role"
+msgstr "Ruolo"
+
+#: templates/chat/partials/members_list.html:17
+#: templates/chat/partials/members_list.html:24
+msgid "Admin"
+msgstr "Admin"
+
+#: templates/chat/partials/members_list.html:18
+#: templates/chat/partials/members_list.html:24
+msgid "Member"
+msgstr "Membro"
+
+#: templates/chat/partials/members_list.html:20
+msgid "Remove member"
+msgstr "Rimuovi membro"
+
+#: templates/chat/settings.html:12
+msgid ""
+"strophae routes every agent's model through OpenRouter. Connect your key to "
+"run real models in parallel."
+msgstr "strophae instrada il modello di ogni agente attraverso OpenRouter. Collega la tua chiave per eseguire modelli reali in parallelo."
+"strophae instrada il modello di ogni agente attraverso OpenRouter. Collega "
+"la tua chiave per eseguire modelli reali in parallelo."
+
+#: templates/chat/settings.html:17
+msgid "OpenRouter API key"
+msgstr "Chiave API OpenRouter"
+
+#: templates/chat/settings.html:25
+msgid ""
+"Your key is stored only in this browser and is sent directly to OpenRouter — "
+"never to strophae."
+msgstr "La tua chiave è salvata solo in questo browser e viene inviata direttamente a OpenRouter — mai a strophae."
+"La tua chiave è salvata solo in questo browser e viene inviata direttamente "
+"a OpenRouter — mai a strophae."
+
+#: templates/chat/settings.html:30
+msgid "Hide"
+msgstr "Nascondi"
+
+#: templates/chat/settings.html:30 templates/chat/settings.html:33
+msgid "Show"
+msgstr "Mostra"
+
+#: templates/chat/settings.html:32
+msgid "Show or hide the key"
+msgstr "Mostra o nascondi la chiave"
+
+#: templates/chat/settings.html:35
+msgid ""
+"OpenRouter keys usually start with “sk-or-”. Double-check you pasted the "
+"whole key."
+msgstr "Le chiavi OpenRouter di solito iniziano con “sk-or-”. Controlla di aver incollato la chiave completa."
+"Le chiavi OpenRouter di solito iniziano con “sk-or-”. Controlla di aver "
+"incollato la chiave completa."
+
+#: templates/chat/settings.html:38
+msgid "Save key"
+msgstr "Salva chiave"
+
+#: templates/chat/settings.html:39
+msgid "Disconnect"
+msgstr "Disconnetti"
+
+#: templates/chat/settings.html:41
+msgid "Get a key"
+msgstr "Ottieni una chiave"
+
+#: templates/chat/settings.html:47
+msgid "Connected as"
+msgstr "Connesso come"
+
+#: templates/chat/settings.html:55
+msgid ""
+"The interface language for your account — it follows you on every device. "
+"Your conversations, agents and personas are never translated."
+msgstr "La lingua dell'interfaccia per il tuo account — ti segue su ogni dispositivo. Le tue conversazioni, i tuoi agenti e le tue personas non vengono mai tradotti."
+"La lingua dell'interfaccia per il tuo account — ti segue su ogni "
+"dispositivo. Le tue conversazioni, i tuoi agenti e le tue personas non "
+"vengono mai tradotti."
+
+#: templates/chat/settings.html:69
+msgid ""
+"GPT-4o, Claude, Gemini, Llama and more are all reachable through a single "
+"OpenRouter key. Per-agent model selection lives on the compose screen."
+msgstr "GPT-4o, Claude, Gemini, Llama e altri sono tutti raggiungibili con un'unica chiave OpenRouter. La selezione del modello per agente si trova nella schermata di composizione."
+"GPT-4o, Claude, Gemini, Llama e altri sono tutti raggiungibili con un'unica "
+"chiave OpenRouter. La selezione del modello per agente si trova nella "
+"schermata di composizione."
+
+#: templates/chat/settings.html:73
+msgid "API key saved"
+msgstr "Chiave API salvata"
+
+#: templates/chat/settings.html:73
+msgid "API key cleared"
+msgstr "Chiave API rimossa"
+
+#: templates/chat/settings.html:73
+msgid "Disconnected from OpenRouter"
+msgstr "Disconnesso da OpenRouter"
