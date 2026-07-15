@@ -12,6 +12,9 @@ and every agent answers in its own column, streaming live. It was implemented fr
 ## Stack & tooling
 
 - **Python 3.13 / Django 6.0**, managed with **uv** (`pyproject.toml`, `uv.lock`).
+- **PostgreSQL 17** (constitution-mandated stack). `config/settings.py` reads
+  `POSTGRES_*` env vars with dev defaults (`strophae`/`strophae`@127.0.0.1:5432);
+  driver is `psycopg` 3.
 - Frontend: server-rendered Django templates + **htmx** (CRUD / navigation partials),
   **Alpine.js** (menus, toasts, the chat client, the API-key store), and
   **Tailwind + DaisyUI** loaded via CDN. The precise visual identity from the prototype
@@ -25,6 +28,9 @@ and every agent answers in its own column, streaming live. It was implemented fr
 ### Commands
 
 - Install: `uv sync`
+- Database (one-time): `brew install postgresql@17 && brew services start postgresql@17`,
+  then `createuser --createdb strophae && createdb -O strophae strophae`
+  (CREATEDB is needed so pytest can create its test database).
 - Run: `uv run python manage.py runserver`
 - Migrate: `uv run python manage.py makemigrations && uv run python manage.py migrate`
 - Seed demo data: `uv run python manage.py seed` (creates demo users — sign in with
