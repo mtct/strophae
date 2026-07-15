@@ -1,0 +1,325 @@
+{% extends "chat/_app.html" %}
+{% load i18n %}
+{% load strophae %}
+
+{% block title %}{{ conv.title }} · strophae{% endblock %}
+
+{% block main %}
+{{ agents|json_script:"agents-data" }}
+{{ shared_prompt|json_script:"shared-prompt" }}
+{{ conv.title|json_script:"conv-title" }}
+<script id="model-slugs" type="application/json">{
+  {% for label, slug in model_slugs.items %}"{{ label|escapejs }}":"{{ slug|escapejs }}"{% if not forloop.last %},{% endif %}{% endfor %}
+}</script>
+
+<div style="flex:1;display:flex;flex-direction:column;min-height:0;"
+     x-data="chatApp({ convId: {{ conv.id }}, sendUrl: '{% url 'send_message' conv.id %}', addUrl: '{% url 'add_agent' conv.id %}?for=chat' })"
+     @open-edit.window="openEdit($event.detail)"
+     @agent:added.window="agents.push($event.detail); $nextTick(() => scrollCol($event.detail.id))">
+
+  <!-- Header -->
+  <div style="display:flex;align-items:center;gap:13px;padding:10px 16px;border-bottom:1px solid #e6e7ea;background:#fff;flex:none;"
+       x-data="{ shareOpen:false }" @click.outside="shareOpen=false">
+    <span style="font-size:14.5px;font-weight:600;color:#26272b;" x-text="title"></span>
+    {% if has_shared %}
+      <span style="display:inline-flex;align-items:center;gap:5px;font-size:11.5px;color:#71727a;background:#f0f0f2;border-radius:6px;padding:3px 8px;">∗ {% translate "Shared context" %}</span>
+    {% endif %}
+    <span style="flex:1;"></span>
+    <button type="button" @click="libraryOpen=true" class="sc-btn">{% translate "Personas" %}</button>
+    <button type="button" @click="addAgent()" class="sc-btn">+ {% translate "Agent" %}</button>
+    <div style="position:relative;">
+      <button type="button" @click="shareOpen=!shareOpen" class="sc-btn">{% translate "Export" %}</button>
+      <div x-cloak x-show="shareOpen" class="sc-menu scpop" style="position:absolute;top:40px;right:0;z-index:40;min-width:200px;">
+        <button type="button" @click="exportMarkdown(); shareOpen=false">{% translate "Copy as Markdown" %}</button>
+        <button type="button" @click="exportJson(); shareOpen=false">{% translate "Download .json" %}</button>
+        <button type="button" @click="shareLink(); shareOpen=false">{% translate "Copy share link" %}</button>
+      </div>
+    </div>
+    <a href="{% url 'compose' conv.id %}" title="{% translate 'Edit agents' %}" class="sc-btn" style="width:34px;height:34px;display:inline-flex;align-items:center;justify-content:center;font-size:14px;color:#82838b;">✎</a>
+  </div>
+
+  <!-- Columns -->
+  <div class="sc-scroll" style="flex:1;display:flex;overflow-x:auto;min-height:0;">
+    <template x-for="agent in agents" :key="agent.id">
+      <div style="flex:1 1 0;min-width:300px;display:flex;flex-direction:column;min-height:0;border-right:1px solid #e6e7ea;background:#fff;">
+        <div style="position:relative;display:flex;align-items:flex-start;gap:10px;padding:13px 14px;border-bottom:1px solid #f0f0f2;flex:none;" :style="'background:'+agent.header_bg">
+          <span style="margin-top:4px;flex:none;width:10px;height:10px;border-radius:50%;" :style="'background:'+agent.accent+';box-shadow:0 0 0 3px '+agent.soft"></span>
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:600;font-size:14.5px;line-height:1.2;" x-text="agent.name"></div>
+            <select class="mono" @change="changeModel(agent, $event.target.value)"
+                    style="margin-top:2px;margin-left:-2px;border:none;background:transparent;font-size:11.5px;color:#9a9ba2;cursor:pointer;outline:none;max-width:100%;" aria-label="{% translate 'Model' %}">
+              {% for m in models %}<option value="{{ m }}" x-bind:selected="agent.model === '{{ m }}'">{{ m }}</option>{% endfor %}
+            </select>
+            <div class="sc-clamp" x-show="agent.system_prompt" style="margin-top:6px;font-size:11.5px;color:#aeaeb4;line-height:1.45;font-style:italic;" x-text="agent.system_prompt"></div>
+          </div>
+          <div style="position:relative;">
+            <button type="button" @click="menuId = (menuId===agent.id ? null : agent.id)" style="flex:none;width:26px;height:26px;border-radius:7px;border:none;background:transparent;color:#9a9ba2;cursor:pointer;font-size:17px;line-height:1;">⋯</button>
+            <div x-cloak x-show="menuId===agent.id" @click.outside="menuId=null" class="sc-menu scpop" style="position:absolute;top:30px;right:0;z-index:40;min-width:178px;">
+              <button type="button" @click="$dispatch('open-edit', agent.id); menuId=null">{% translate "Edit system prompt" %}</button>
+              <button type="button" @click="clearThread(agent); menuId=null">{% translate "Clear thread" %}</button>
+              <template x-if="agents.length > 1">
+                <button type="button" @click="removeAgent(agent); menuId=null" style="color:#c0392b;">{% translate "Remove agent" %}</button>
+              </template>
+            </div>
+          </div>
+        </div>
+
+        <div class="sc-scroll thread" :data-agent="agent.id" style="flex:1;overflow-y:auto;min-height:0;padding:16px 14px;display:flex;flex-direction:column;gap:12px;">
+          <div x-show="agent.messages.length === 0" style="margin:auto;text-align:center;color:#c6c6cc;font-size:12.5px;">{% translate "Waiting for the first prompt" %}</div>
+          <template x-for="(m, i) in agent.messages" :key="i">
+            <div>
+              <template x-if="m.role==='user'">
+                <div class="scfade" style="align-self:flex-end;max-width:88%;background:#1c1d20;color:#fff;padding:9px 12px;border-radius:13px 13px 4px 13px;font-size:13px;line-height:1.55;margin-left:auto;width:fit-content;white-space:pre-wrap;" x-text="m.text"></div>
+              </template>
+              <template x-if="m.role==='assistant'">
+                <div class="scfade" style="align-self:flex-start;max-width:94%;background:#f5f5f7;border:1px solid #ececee;color:#26272b;padding:10px 13px;border-radius:13px 13px 13px 4px;font-size:13px;line-height:1.6;width:fit-content;white-space:pre-wrap;">
+                  <span x-show="!m.text" style="display:inline-flex;gap:4px;padding:3px 1px;">
+                    <span style="width:6px;height:6px;border-radius:50%;animation:scblink 1.2s infinite ease-in-out;" :style="'background:'+agent.accent"></span>
+                    <span style="width:6px;height:6px;border-radius:50%;animation:scblink 1.2s infinite ease-in-out .2s;" :style="'background:'+agent.accent"></span>
+                    <span style="width:6px;height:6px;border-radius:50%;animation:scblink 1.2s infinite ease-in-out .4s;" :style="'background:'+agent.accent"></span>
+                  </span>
+                  <span x-show="m.text" x-text="m.text"></span>
+                </div>
+              </template>
+            </div>
+          </template>
+        </div>
+      </div>
+    </template>
+    <button type="button" @click="addAgent()" title="{% translate 'Add agent' %}" style="flex:none;width:52px;display:flex;align-items:center;justify-content:center;border:none;border-right:1px solid #e6e7ea;background:#fafafa;color:#b6b6bc;font-size:22px;cursor:pointer;font-family:inherit;">+</button>
+  </div>
+
+  <!-- Composer -->
+  <div style="border-top:1px solid #e6e7ea;background:#fff;padding:14px 16px;flex:none;">
+    <div style="max-width:1080px;margin:0 auto;">
+      <div style="display:flex;gap:10px;align-items:flex-end;background:#f5f5f7;border:1px solid #e6e7ea;border-radius:15px;padding:7px 7px 7px 15px;">
+        {% translate "Message your agent…" as t_msg_one %}{% translate "Message all {n} agents…" as t_msg_all %}
+        <textarea x-model="input" @keydown="onKey($event)" rows="1"
+                  aria-label="{% translate 'Message' %}"
+                  :placeholder="agents.length > 1 ? '{{ t_msg_all|escapejs }}'.replace('{n}', agents.length) : '{{ t_msg_one|escapejs }}'"
+                  style="flex:1;border:none;background:transparent;outline:none;resize:none;font-size:14px;line-height:1.5;color:#1c1d20;max-height:140px;padding:7px 0;font-family:inherit;"></textarea>
+        <button type="button" @click="send()" :disabled="!input.trim() || sending" title="{% translate 'Send' %}"
+                style="flex:none;width:38px;height:38px;border-radius:11px;border:none;background:#1c1d20;color:#fff;cursor:pointer;font-size:17px;display:flex;align-items:center;justify-content:center;" :style="(!input.trim()||sending)?'opacity:.4':''">↑</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:8px;padding:0 4px;color:#aeaeb4;font-size:11.5px;">
+        {% translate "Sent to 1 agent" as t_sent_one %}{% translate "Sent in parallel to {n} agents" as t_sent_all %}
+        <span x-text="agents.length > 1 ? '{{ t_sent_all|escapejs }}'.replace('{n}', agents.length) : '{{ t_sent_one|escapejs }}'"></span><span>·</span><span>{% translate "Enter to send · Shift+Enter for a new line" %}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit system prompt modal -->
+  <div x-cloak x-show="editing" @click="closeEdit()" style="position:fixed;inset:0;z-index:50;background:rgba(20,20,24,0.34);display:flex;align-items:center;justify-content:center;padding:24px;" class="scfade">
+    <div @click.stop style="width:560px;max-width:100%;background:#fff;border-radius:16px;box-shadow:0 24px 70px rgba(0,0,0,0.28);padding:22px;" x-show="editing">
+      <template x-if="editing">
+        <div>
+          <div style="display:flex;align-items:center;gap:11px;margin-bottom:4px;">
+            <span style="flex:none;width:11px;height:11px;border-radius:50%;" :style="'background:'+editing.accent+';box-shadow:0 0 0 3px '+editing.soft"></span>
+            <span style="font-size:17px;font-weight:600;" x-text="editing.name"></span>
+            <span class="mono" style="font-size:11.5px;color:#9a9ba2;" x-text="editing.model"></span>
+          </div>
+          <p style="margin:6px 0 14px;color:#82838b;font-size:13px;line-height:1.5;">{% translate "This defines the agent's role and stays fixed across the whole conversation — independent of the other agents." %}</p>
+          <textarea x-model="editing.system_prompt" rows="6" placeholder="{% translate 'You are…' %}" class="sc-textarea" style="font-size:13.5px;line-height:1.6;padding:13px 14px;border-radius:11px;"></textarea>
+          <div style="display:flex;align-items:center;justify-content:flex-end;margin-top:20px;">
+            <button type="button" @click="closeEdit()" class="sc-btn-dark">{% translate "Done" %}</button>
+          </div>
+        </div>
+      </template>
+    </div>
+  </div>
+
+  {% include "chat/partials/library_modal.html" with libraryOpen="libraryOpen" %}
+</div>
+
+{% translate "Connect your OpenRouter key in Settings first" as t_need_key %}
+{% translate "Could not start the session" as t_send_failed %}
+{% translate "Copied as Markdown" as t_copied_md %}
+{% translate "Downloaded session.json" as t_downloaded %}
+{% translate "Share link copied" as t_link_copied %}
+{% translate "You" as t_you %}
+<script>
+function getCookie(name){
+  const m = document.cookie.match('(^|;)\\s*'+name+'\\s*=\\s*([^;]+)');
+  return m ? m.pop() : '';
+}
+const CSRF = getCookie('csrftoken');
+const MODEL_SLUGS = JSON.parse(document.getElementById('model-slugs').textContent);
+
+async function streamAgent(slug, messages, key, onToken){
+  const resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method:'POST',
+    headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer '+key,
+              'HTTP-Referer':location.origin, 'X-Title':'strophae' },
+    body: JSON.stringify({ model: slug, stream:true, messages })
+  });
+  if(!resp.ok){
+    let detail = 'HTTP '+resp.status;
+    try { const j = await resp.json(); detail = j.error?.message || detail; } catch(e){}
+    throw new Error(detail);
+  }
+  const reader = resp.body.getReader();
+  const dec = new TextDecoder();
+  let buf = '';
+  while(true){
+    const { done, value } = await reader.read();
+    if(done) break;
+    buf += dec.decode(value, { stream:true });
+    let idx;
+    while((idx = buf.indexOf('\n')) >= 0){
+      const line = buf.slice(0, idx).trim();
+      buf = buf.slice(idx + 1);
+      if(!line.startsWith('data:')) continue;
+      const data = line.slice(5).trim();
+      if(data === '[DONE]') return;
+      try {
+        const j = JSON.parse(data);
+        const t = j.choices?.[0]?.delta?.content;
+        if(t) onToken(t);
+      } catch(e){}
+    }
+  }
+}
+
+function chatApp(opts){
+  return {
+    convId: opts.convId,
+    sendUrl: opts.sendUrl,
+    addUrl: opts.addUrl,
+    agents: JSON.parse(document.getElementById('agents-data').textContent),
+    sharedPrompt: JSON.parse(document.getElementById('shared-prompt').textContent) || '',
+    title: JSON.parse(document.getElementById('conv-title').textContent),
+    input: '',
+    sending: false,
+    menuId: null,
+    editing: null,
+    libraryOpen: false,
+
+    init(){ this.$nextTick(() => this.scrollAll()); },
+
+    onKey(e){
+      if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); this.send(); }
+    },
+
+    toast(msg){ window.dispatchEvent(new CustomEvent('toast', { detail:{ value: msg } })); },
+
+    scrollCol(id){
+      const el = document.querySelector('.thread[data-agent="'+id+'"]');
+      if(el) el.scrollTop = el.scrollHeight;
+    },
+    scrollAll(){ this.agents.forEach(a => this.scrollCol(a.id)); },
+
+    send(){
+      const text = this.input.trim();
+      if(!text || this.sending) return;
+      const key = localStorage.getItem('strophae.openrouter');
+      if(!key){ this.toast('{{ t_need_key|escapejs }}'); return; }
+      this.sending = true;
+      this.input = '';
+      fetch(this.sendUrl, {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json', 'X-CSRFToken': CSRF },
+        body: JSON.stringify({ text })
+      }).then(r => r.json()).then(data => {
+        if(data.title) this.title = data.title;
+        this.agents.forEach(a => {
+          a.messages.push({ role:'user', text });
+          const slot = { role:'assistant', text:'', streaming:true };
+          a.messages.push(slot);
+          this.runAgent(a, slot, data.messages[a.id], key);
+        });
+        this.$nextTick(() => this.scrollAll());
+      }).catch(() => { this.sending = false; this.toast('{{ t_send_failed|escapejs }}'); });
+    },
+
+    runAgent(agent, slot, msgId, key){
+      const sys = [];
+      if(this.sharedPrompt && this.sharedPrompt.trim()) sys.push(this.sharedPrompt.trim());
+      if(agent.system_prompt && agent.system_prompt.trim()) sys.push(agent.system_prompt.trim());
+      const messages = [];
+      if(sys.length) messages.push({ role:'system', content: sys.join('\n\n') });
+      agent.messages.forEach(m => {
+        if(m === slot) return;
+        if(m.role === 'assistant' && !m.text) return;
+        messages.push({ role: m.role, content: m.text });
+      });
+      const slug = agent.model_slug || MODEL_SLUGS[agent.model] || agent.model;
+      streamAgent(slug, messages, key, (t) => { slot.text += t; this.scrollCol(agent.id); })
+        .then(() => { slot.streaming = false; })
+        .catch(e => { slot.text = slot.text || ('⚠ ' + e.message); slot.streaming = false; })
+        .finally(() => {
+          this.finalize(msgId, slot.text);
+          if(!this.agents.some(a => a.messages.some(m => m.streaming))) this.sending = false;
+        });
+    },
+
+    finalize(msgId, text){
+      if(!msgId) return;
+      fetch('/message/' + msgId + '/finalize/', {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json', 'X-CSRFToken': CSRF },
+        body: JSON.stringify({ text })
+      });
+    },
+
+    changeModel(agent, label){
+      agent.model = label;
+      agent.model_slug = MODEL_SLUGS[label] || label;
+      const fd = new FormData(); fd.append('model', label);
+      fetch('/agent/' + agent.id + '/update/', { method:'POST', headers:{ 'X-CSRFToken': CSRF }, body: fd });
+    },
+
+    addAgent(){
+      fetch(this.addUrl, { method:'POST', headers:{ 'X-CSRFToken': CSRF } })
+        .then(r => r.json()).then(data => { this.agents.push(data.agent); });
+    },
+
+    clearThread(agent){
+      agent.messages = [];
+      fetch('/agent/' + agent.id + '/clear/', { method:'POST', headers:{ 'X-CSRFToken': CSRF } });
+    },
+
+    removeAgent(agent){
+      if(this.agents.length <= 1) return;
+      this.agents = this.agents.filter(a => a.id !== agent.id);
+      fetch('/agent/' + agent.id + '/remove/', { method:'POST', headers:{ 'X-CSRFToken': CSRF } });
+    },
+
+    openEdit(id){ this.editing = this.agents.find(a => a.id === id) || null; },
+    closeEdit(){
+      if(this.editing){
+        const fd = new FormData(); fd.append('system_prompt', this.editing.system_prompt);
+        fetch('/agent/' + this.editing.id + '/update/', { method:'POST', headers:{ 'X-CSRFToken': CSRF }, body: fd });
+      }
+      this.editing = null;
+    },
+
+    buildMarkdown(){
+      let out = '# strophae session\n\n';
+      if(this.sharedPrompt && this.sharedPrompt.trim()){
+        out += '## Shared context\n> ' + this.sharedPrompt.trim() + '\n\n';
+      }
+      this.agents.forEach(a => {
+        out += '## ' + a.name + ' — ' + a.model + '\n';
+        if(a.system_prompt) out += '> ' + a.system_prompt + '\n';
+        out += '\n';
+        a.messages.forEach(m => {
+          out += (m.role === 'user' ? '**{{ t_you|escapejs }}:** ' : '**' + a.name + ':** ') + (m.text || '') + '\n\n';
+        });
+        out += '\n';
+      });
+      return out;
+    },
+    exportMarkdown(){ navigator.clipboard.writeText(this.buildMarkdown()); this.toast('{{ t_copied_md|escapejs }}'); },
+    exportJson(){
+      const data = JSON.stringify({ agents: this.agents.map(a => ({ name:a.name, model:a.model, messages:a.messages })) }, null, 2);
+      const blob = new Blob([data], { type:'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a'); link.href = url; link.download = 'strophae-session.json'; link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      this.toast('{{ t_downloaded|escapejs }}');
+    },
+    shareLink(){ navigator.clipboard.writeText(location.origin + '/c/' + this.convId + '/'); this.toast('{{ t_link_copied|escapejs }}'); },
+  };
+}
+</script>
+{% endblock %}

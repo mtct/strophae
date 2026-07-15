@@ -1,0 +1,60 @@
+{% extends "chat/_app.html" %}
+{% load i18n %}
+{% load strophae %}
+
+{% block title %}{% translate "Compose" %} · strophae{% endblock %}
+
+{% block main %}
+<div class="sc-scroll" style="flex:1;overflow-y:auto;"
+     x-data="{ libraryOpen:false, agentCount:{{ agent_count }} }"
+     x-init="new MutationObserver(() => agentCount = $refs.grid.querySelectorAll('.agent-card').length).observe($refs.grid, { childList:true })"
+     @open-library.window="libraryOpen=true"
+     @agent:added-html.window="$refs.grid.insertAdjacentHTML('beforeend', $event.detail); htmx.process($refs.grid.lastElementChild)">
+  <div style="max-width:860px;margin:0 auto;padding:56px 24px 90px;">
+    <h1 style="font-size:30px;font-weight:600;letter-spacing:-0.025em;margin:0 0 10px;">{% translate "Compose your council" %}</h1>
+    <p style="margin:0 0 30px;color:#71727a;font-size:15px;line-height:1.55;max-width:50ch;">{% translate "One prompt, many minds. Every agent answers in parallel — each keeps its own context and system prompt. Set them up, then start the conversation." %}</p>
+
+    <!-- Shared context -->
+    <div style="background:#fbfbfc;border:1px solid #e6e7ea;border-radius:14px;padding:16px;margin-bottom:24px;">
+      <div style="display:flex;align-items:center;gap:9px;">
+        <span style="display:flex;width:21px;height:21px;align-items:center;justify-content:center;border-radius:6px;background:#1c1d20;color:#fff;font-size:12px;">∗</span>
+        <span style="font-size:14.5px;font-weight:600;">{% translate "Shared context" %}</span>
+        <span style="color:#a3a4ab;font-size:12.5px;">{% translate "applied to every agent" %}</span>
+      </div>
+      <p style="margin:7px 0 12px 30px;color:#82838b;font-size:12.5px;line-height:1.5;max-width:56ch;">{% translate "A system prompt all agents receive on top of their own — common background, rules or reference material." %}</p>
+      <textarea name="shared_system_prompt" rows="2" placeholder="{% translate 'Shared system prompt — context every agent should know…' %}"
+                hx-post="{% url 'update_shared' conv.id %}" hx-trigger="change, blur" hx-swap="none"
+                class="sc-textarea" style="background:#fff;">{{ conv.shared_system_prompt }}</textarea>
+    </div>
+
+    <!-- Agents -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+      <span style="font-size:14.5px;font-weight:600;">{% translate "Agents" %}</span>
+      <button type="button" @click="libraryOpen=true" class="sc-btn" style="display:inline-flex;align-items:center;gap:7px;padding:7px 12px;">▤ {% translate "Personas library" %}<span x-text="$store.library.personas.length ? ' (' + $store.library.personas.length + ')' : ''">{% if persona_count %} ({{ persona_count }}){% endif %}</span></button>
+    </div>
+
+    <div id="agents-grid" x-ref="grid" style="display:flex;flex-wrap:wrap;gap:14px;justify-content:center;align-items:start;">
+      {% for agent in agents %}
+        {% include "chat/partials/agent_card.html" %}
+      {% endfor %}
+    </div>
+
+    <button type="button"
+            hx-post="{% url 'add_agent' conv.id %}" hx-target="#agents-grid" hx-swap="beforeend"
+            style="margin-top:14px;width:100%;border:1px dashed #cfd0d6;background:transparent;border-radius:12px;padding:13px;color:#71727a;font-size:14px;font-weight:500;cursor:pointer;font-family:inherit;">+ {% translate "Add agent" %}</button>
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:30px;">
+      {% translate "agent in this session" as t_agents_one %}{% translate "agents in this session" as t_agents_many %}
+      <span style="color:#9a9ba2;font-size:13px;"
+            x-text="agentCount + ' ' + (agentCount === 1 ? '{{ t_agents_one|escapejs }}' : '{{ t_agents_many|escapejs }}')">{% blocktranslate count counter=agent_count %}{{ counter }} agent in this session{% plural %}{{ counter }} agents in this session{% endblocktranslate %}</span>
+      <a href="{% url 'chat' conv.id %}" class="sc-btn-dark"
+         :aria-disabled="agentCount === 0"
+         :style="agentCount === 0 ? 'opacity:.45;pointer-events:none;cursor:not-allowed;' : ''"
+         @click="if (agentCount === 0) $event.preventDefault()"
+         style="padding:13px 26px;font-size:15px;text-decoration:none;display:inline-block;">{% translate "Start session" %} →</a>
+    </div>
+  </div>
+
+  {% include "chat/partials/library_modal.html" %}
+</div>
+{% endblock %}
