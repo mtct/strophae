@@ -13,8 +13,29 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 import os
 from pathlib import Path
 
+from django.core.exceptions import ImproperlyConfigured
+from dotenv import load_dotenv
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Environment-specific configuration. DJANGO_ENV picks the env file to load:
+# 'test' (the default — local dev and CI, committed) or 'production'
+# (gitignored; start from .env.production.example). Variables already present
+# in the real environment win over the file, so a deployment platform can
+# inject secrets directly and skip the file entirely.
+DJANGO_ENV = os.environ.get('DJANGO_ENV', 'test')
+load_dotenv(BASE_DIR / f'.env.{DJANGO_ENV}')
+
+
+def _require_env(name: str) -> str:
+    try:
+        return os.environ[name]
+    except KeyError:
+        raise ImproperlyConfigured(
+            f'{name} is not set. Define it in .env.{DJANGO_ENV} '
+            f'or in the environment (DJANGO_ENV={DJANGO_ENV!r}).'
+        ) from None
 
 
 # Quick-start development settings - unsuitable for production
@@ -80,16 +101,18 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 #
-# PostgreSQL per the project constitution (Technology Stack). Defaults match
-# the local dev provisioning (`createuser --createdb strophae`, db `strophae`);
-# override via POSTGRES_* environment variables in other environments.
+# PostgreSQL per the project constitution (Technology Stack). Connection
+# values come from the per-environment env file loaded above (.env.test drives
+# the Docker dev database in compose.yaml, host port 5433). Credentials have
+# no fallback on purpose: a missing user/password must fail loudly, not
+# silently connect with a default.
 
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': os.environ.get('POSTGRES_DB', 'strophae'),
-        'USER': os.environ.get('POSTGRES_USER', 'strophae'),
-        'PASSWORD': os.environ.get('POSTGRES_PASSWORD', 'strophae'),
+        'USER': _require_env('POSTGRES_USER'),
+        'PASSWORD': _require_env('POSTGRES_PASSWORD'),
         'HOST': os.environ.get('POSTGRES_HOST', '127.0.0.1'),
         'PORT': os.environ.get('POSTGRES_PORT', '5432'),
     }

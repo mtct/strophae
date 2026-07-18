@@ -12,9 +12,15 @@ and every agent answers in its own column, streaming live. It was implemented fr
 ## Stack & tooling
 
 - **Python 3.13 / Django 6.0**, managed with **uv** (`pyproject.toml`, `uv.lock`).
-- **PostgreSQL 17** (constitution-mandated stack). `config/settings.py` reads
-  `POSTGRES_*` env vars with dev defaults (`strophae`/`strophae`@127.0.0.1:5432);
-  driver is `psycopg` 3.
+- **PostgreSQL 17** (constitution-mandated stack), run in Docker via OrbStack
+  (`compose.yaml`); driver is `psycopg` 3. Connection config is per-environment:
+  `config/settings.py` loads `.env.{DJANGO_ENV}` (python-dotenv), where
+  `DJANGO_ENV` is `test` (default) or `production`. `.env.test` is committed
+  (throwaway dev creds, also fed to the container via compose `env_file`, host
+  port 5433 because 5432 is taken by other projects' containers);
+  `.env.production` is gitignored — copy `.env.production.example`. Real env
+  vars beat the file, and `POSTGRES_USER`/`POSTGRES_PASSWORD` have **no
+  fallback**: missing credentials raise `ImproperlyConfigured` at startup.
 - Frontend: server-rendered Django templates + **htmx** (CRUD / navigation partials),
   **Alpine.js** (menus, toasts, the chat client, the API-key store), and
   **Tailwind + DaisyUI** loaded via CDN. The precise visual identity from the prototype
@@ -28,9 +34,10 @@ and every agent answers in its own column, streaming live. It was implemented fr
 ### Commands
 
 - Install: `uv sync`
-- Database (one-time): `brew install postgresql@17 && brew services start postgresql@17`,
-  then `createuser --createdb strophae && createdb -O strophae strophae`
-  (CREATEDB is needed so pytest can create its test database).
+- Database: `docker compose up -d` (needs OrbStack — or any Docker engine —
+  running; `orb start` if it isn't). Postgres 17 with a named `pgdata` volume,
+  published on 127.0.0.1:5433. The bootstrap `strophae` user is a container
+  superuser, so pytest can create its test database with no extra grants.
 - Run: `uv run python manage.py runserver`
 - Migrate: `uv run python manage.py makemigrations && uv run python manage.py migrate`
 - Seed demo data: `uv run python manage.py seed` (creates demo users — sign in with

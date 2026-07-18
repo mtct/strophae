@@ -12,10 +12,16 @@ your browser and sent directly to OpenRouter.
 
 ```bash
 uv sync
+docker compose up -d                # PostgreSQL 17 (OrbStack or any Docker engine)
 uv run python manage.py migrate
 uv run python manage.py seed        # demo data
 uv run python manage.py runserver
 ```
+
+Database credentials live in per-environment env files: `.env.test` (committed,
+used by default and by the Docker database) and `.env.production` (gitignored —
+copy [.env.production.example](.env.production.example) and run with
+`DJANGO_ENV=production`).
 
 Open http://127.0.0.1:8000 and sign in with a demo account:
 

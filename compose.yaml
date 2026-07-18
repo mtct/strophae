@@ -1,0 +1,28 @@
+# Local dev database (run with OrbStack or any Docker engine): docker compose up -d
+#
+# Credentials come from .env.test (also loaded by config/settings.py). The
+# bootstrap user created by the postgres image is a superuser, so pytest can
+# create its test database without extra grants.
+
+services:
+  db:
+    image: postgres:17
+    container_name: strophae-db
+    # Same file Django loads for the test environment, so app and database
+    # can never disagree on credentials. Production does not use this compose
+    # file — it points DJANGO_ENV=production at its own database.
+    env_file: .env.test
+    ports:
+      # Host port 5433 (must match POSTGRES_PORT in .env.test): 5432 is taken
+      # by other projects' Postgres containers.
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  pgdata:
