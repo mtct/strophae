@@ -4,146 +4,130 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What strophae is
 
-**strophae** is a multi-persona ("multi-LLM") chat app. One prompt is broadcast in
-parallel to several agents — each with its own name, colour, model and system prompt —
-and every agent answers in its own column, streaming live. It was implemented from a
-`claude.ai/design` prototype (`Strophae.dc.html`).
+**strophae** is a multi-persona ("multi-LLM") chat desktop app for macOS and
+Windows, built with **Electron + Bun + React**. One prompt is broadcast in
+parallel to several agents — each with its own name, colour, model and system
+prompt — and every agent answers in its own column, streaming live. The
+visual identity comes from a `claude.ai/design` prototype.
 
-## Stack & tooling
+History: this repo has been through three incarnations — Django+htmx web
+app → native Qt (PySide6) desktop app → the current Electron app. The
+earlier implementations live only in git history; recover any piece with
+`git checkout <commit> -- <path>`.
 
-- **Python 3.13 / Django 6.0**, managed with **uv** (`pyproject.toml`, `uv.lock`).
-- **PostgreSQL 17** (constitution-mandated stack), run in Docker via OrbStack
-  (`compose.yaml`); driver is `psycopg` 3. Connection config is per-environment:
-  `config/settings.py` loads `.env.{DJANGO_ENV}` (python-dotenv), where
-  `DJANGO_ENV` is `test` (default) or `production`. `.env.test` is committed
-  (throwaway dev creds, also fed to the container via compose `env_file`, host
-  port 5433 because 5432 is taken by other projects' containers);
-  `.env.production` is gitignored — copy `.env.production.example`. Real env
-  vars beat the file, and `POSTGRES_USER`/`POSTGRES_PASSWORD` have **no
-  fallback**: missing credentials raise `ImproperlyConfigured` at startup.
-- Frontend: server-rendered Django templates + **htmx** (CRUD / navigation partials),
-  **Alpine.js** (menus, toasts, the chat client, the API-key store), and
-  **Tailwind + DaisyUI** loaded via CDN. The precise visual identity from the prototype
-  (oklch accents, Hanken Grotesk / IBM Plex Mono, exact spacing) is preserved with
-  inline styles + the `.sc-*` helper classes in `templates/base.html`. The inline-style
-  linter warnings are expected and intentional.
-- No JS build step. The CDNs (Tailwind Play CDN especially) are **dev-only**; a real
-  deployment needs a compiled Tailwind/DaisyUI bundle, pinned SRI-hashed assets, and
-  `DEBUG=False` + a real `SECRET_KEY`.
+## Stack & commands
 
-### Commands
+**Bun** is the package manager, bundler (`Bun.build`) and test runner;
+**Electron** hosts the app (main process = data layer, sandboxed renderer =
+React UI); **React 19** + plain CSS (no Tailwind, no CDN — the app is fully
+self-contained; the only network egress is the OpenRouter API, enforced by
+the renderer CSP in `src/renderer/index.html`).
 
-- Install: `uv sync`
-- Database: `docker compose up -d` (needs OrbStack — or any Docker engine —
-  running; `orb start` if it isn't). Postgres 17 with a named `pgdata` volume,
-  published on 127.0.0.1:5433. The bootstrap `strophae` user is a container
-  superuser, so pytest can create its test database with no extra grants.
-- Run: `uv run python manage.py runserver`
-- Migrate: `uv run python manage.py makemigrations && uv run python manage.py migrate`
-- Seed demo data: `uv run python manage.py seed` (creates demo users — sign in with
-  `alex@strophae.app` / `demo` — plus shared personas and seeded history for Alex)
-- Checks: `uv run python manage.py check`
-- Tests: `uv run pytest` (pytest + pytest-django, per the constitution; single test:
-  `uv run pytest chat/tests/test_x.py::TestClass::test_name`).
-- Translations: `uv run python manage.py makemessages -l it --no-obsolete`, fill the
-  `msgstr` entries in `locale/it/LC_MESSAGES/django.po`, then
-  `uv run python manage.py compilemessages -l it`. Needs GNU gettext
-  (`brew install gettext`). Commit **both** `.po` and `.mo` — there is no build
-  pipeline to compile at deploy time. Watch for `#, fuzzy` entries after
-  `makemessages`: fuzzy translations are ignored at compile time.
+- Install: `bun install` (Electron's binary download is a trusted
+  postinstall — see `trustedDependencies` in package.json).
+- Run: `bun run start`
+- Smoke test: `bun run check [shots-dir]` — boots offscreen, walks
+  compose→chat, reports readiness checks, optionally saves PNG screenshots
+  (read them to review visuals). CI runs this headless.
+- Tests: `bun test` (tests/ — domain store, recency grouping, i18n
+  catalogs). Typecheck: `bun run typecheck`.
+- Package: `bun run dist` (electron-builder → `release/`); quick unpacked
+  build: `bunx electron-builder --dir`.
+- **Environment gotcha**: this workspace (VSCode extension host) exports
+  `ELECTRON_RUN_AS_NODE=1`, which turns the Electron binary into plain
+  Node. Launch with `env -u ELECTRON_RUN_AS_NODE …` in terminals here (the
+  `check` npm script and CI set it empty explicitly).
+- **Bun gotcha**: `Bun.build` inlines `__dirname` to the *source* dir —
+  main-process paths must go through `app.getAppPath()` (see
+  `src/main/main.ts`).
 
 ## Architecture
 
-Single app, `chat`. Custom email-login user model (`chat.User`, `AUTH_USER_MODEL`),
-no usernames.
+```text
+src/shared/    types.ts (domain model) · models.ts (DEFAULT_MODELS seed,
+               modelSlug(label, models), supportsImageOutput, HUE_PALETTE,
+               default agent, title rules) · fences.ts (```mermaid block
+               parser) · time.ts (sidebar recency buckets) · i18n.ts (en/it
+               catalogs, translate())
+src/main/      main.ts (window, --check mode) · store.ts (persistence) ·
+               ipc.ts (IPC surface + safeStorage API key) · attachments.ts
+               (file import/extraction + payload files + GC)
+src/preload/   preload.ts (contextBridge → window.strophae)
+src/renderer/  React app: App.tsx (state, view routing, toasts) ·
+               components/ (Sidebar, ComposePage, ChatPage, SettingsModal) ·
+               openrouter.ts (SSE streaming) · theme.ts (oklch accents) ·
+               styles.css · index.html (CSP)
+scripts/       bundle.ts (Bun.build for main/preload/renderer + static copy)
+tests/         bun test suites for src/shared + src/main/store
+packaging/     icons + Mac App Store entitlements (electron-builder
+               buildResources)
+```
 
-Domain model (`chat/models.py`):
-- **User** — email, `name`, `hue` (accent), `role` (Admin/Member).
-- **Persona** / **SharedPersona** — reusable agent definitions; personal vs. team-shared.
-- **Conversation** — owns `shared_system_prompt` (applied to every agent) + its Agents.
-  A *draft* is a Conversation with zero messages; drafts are hidden from the sidebar
-  (`conversation_groups` / `get_or_create_draft` filter on message count).
-- **Agent** — a column in a conversation: name, hue, model (label), system prompt, order.
-  `model_slug` maps the display label → OpenRouter slug via `settings.OPENROUTER_MODEL_SLUGS`.
-- **Message** — `user`/`assistant` rows under an Agent.
+- **Persistence** (`store.ts`): one JSON document (`strophae.json`) in
+  Electron `userData`, atomic tmp+rename writes, debounced; `flush()` on
+  quit. Domain rules ported from the Django era: a *draft* is a
+  conversation whose agents have zero messages (hidden from the sidebar,
+  reused by `getOrCreateDraft`); titles come from the first prompt
+  (46-char cut); `nextHue` walks `HUE_PALETTE`.
+- **Send flow** (ChatPage): `msg:send` persists the user message + an empty
+  assistant slot per agent and returns slot ids → renderer fires one
+  OpenRouter stream per agent (fetch SSE, `src/renderer/openrouter.ts`),
+  accumulating into `live` state → `msg:finalize` writes each slot's full
+  text (or `⚠ error`). The main process never calls OpenRouter.
+- **API key**: encrypted at rest via `safeStorage` (OS keychain),
+  `packaging/openrouter.key` in userData; handed to the renderer only to
+  call OpenRouter directly.
+- **Security posture**: `contextIsolation` + `sandbox` on, no
+  `nodeIntegration`; renderer talks only through the typed preload bridge
+  (`window.strophae`); strict CSP (connect-src limited to openrouter.ai).
+- **Models are user-configurable**: `Settings.models` (label + OpenRouter
+  string) is seeded from `DEFAULT_MODELS` and edited in the Settings modal
+  (add/remove; at least one entry, `settings:setModels`). Slug resolution
+  at request time: configured list → seed defaults → the label itself, so
+  agents referencing a removed model keep working and a raw OpenRouter
+  string works as a label.
+- **Rich assistant replies**: ```mermaid fences render as diagrams
+  (`components/Mermaid.tsx` — mermaid bundled by Bun, securityLevel
+  strict + htmlLabels off + DOMPurify pass; unterminated fences stay raw
+  text while streaming, parser in `src/shared/fences.ts`). Diffusion
+  models: `supportsImageOutput(slug)` adds `modalities:["image","text"]`,
+  streamed `delta.images` data URLs display live and are persisted at
+  finalize as image attachments of the assistant message
+  (`importDataUrl`), shown via `StoredImage`.
+- **i18n**: en source + it catalog in `src/shared/i18n.ts` (tests enforce
+  key parity). Language preference `'' | en | it` ('' = follow OS,
+  `app.getLocale()`); switching from Settings re-renders live. Only product
+  UI text is translated — user content and LLM replies never are;
+  product-created defaults (Simple Jack, "Agent N", session titles) are
+  materialised once in the current language at creation and then frozen.
+- **--check mode** (`main.ts` + `App.tsx` `runSelfTest`): loads the app
+  offscreen with `?check=1`, renderer walks the screens and reports
+  `{check: bool}` via `check:ready`; `check:shot` captures PNGs. 15s
+  timeout guards a hung renderer.
 
-Colour helpers and all seed/default data live in `chat/defaults.py`. Accent colours are
-derived from a hue with `accent()` / `soft()` / `header_bg()` (also exposed as template
-filters in `chat/templatetags/strophae.py`).
+## Packaging & stores
 
-### How a chat turn flows (real OpenRouter streaming)
+`electron-builder.yml`: mac (zip+dmg), `mas` target with sandbox
+entitlements in `packaging/` (App Sandbox + JIT + network client), win zip,
+`appx` target for the Microsoft Store (identity placeholders to fill from
+Partner Center). `PACKAGING.md` documents both store flows; CI
+(`.github/workflows/desktop.yml`) builds both platforms with Bun. All npm
+packages are devDependencies — the runtime bundle is `dist/` only, so
+electron-builder packages no node_modules.
 
-The OpenRouter key is **stored only in the browser** (`localStorage['strophae.openrouter']`)
-and sent **directly from the browser to OpenRouter** — never to the Django server (matches
-the prototype's privacy promise, and is the only sane way to stream N agents in parallel).
+## Known scope notes
 
-1. Compose screen (`compose.html`) edits the draft Conversation's agents + shared prompt;
-   every field autosaves via htmx (`update_agent`, `update_shared`, `add_agent`,
-   `cycle_color`, `remove_agent`, `save_persona`).
-2. Chat screen (`chat.html`) hydrates an Alpine component (`chatApp`) from a
-   `json_script` blob of agents+messages. Alpine owns all message rendering.
-3. On send: POST `c/<id>/send/` persists the user message + an **empty assistant slot**
-   per agent and returns the slot message IDs. The browser then fires one streaming
-   `fetch` to OpenRouter per agent (`streamAgent`), appending tokens into each column,
-   and POSTs `message/<id>/finalize/` with the final text when each agent completes.
-
-Server endpoints never call OpenRouter; they only persist.
-
-### Conventions
-
-- htmx mutations return `204` (no swap) or a re-rendered partial; toasts are fired via an
-  `HX-Trigger: {"toast": "..."}` header, surfaced by the global Alpine listener in
-  `base.html`. Set it with `resp['HX-Trigger'] = json.dumps(...)` —
-  `HttpResponse.headers` has no `.update()`.
-- Ownership is enforced with `_owned_conv` / `_owned_agent` helpers (404 on mismatch).
-
-### Internationalization (spec 002)
-
-- English is the source language; Italian ships in `locale/it/`. Adding a language =
-  one tuple in `settings.LANGUAGES` + a translated catalog; no code changes.
-- Per-request resolution is stock `LocaleMiddleware` + the language cookie — **no
-  custom middleware**. The account preference (`User.language`, `''` = never chosen)
-  is synced with the cookie at exactly two points: the `set_language` FBV and
-  `_sync_language_at_login` (login/signup). At sign-in the account wins; an account
-  with no preference adopts the device cookie (FR-015). `switch_user` applies the
-  target's language but never adopts (impersonation must not write someone else's
-  choice into the account).
-- Only product UI text is translated. User content (messages, titles, persona/agent
-  names & prompts) and LLM replies are never touched. Product-created defaults
-  (starter agent, `Agent N` names, `New session` titles) are `gettext_noop`-marked in
-  `chat/defaults.py` and materialised with `gettext()` at creation time
-  (`defaults.localized_agent`), then frozen as user content. `manage.py seed` runs
-  under `translation.override('en')` — demo data is deliberately English.
-- JS-visible strings live in server-rendered templates: use
-  `{% translate "..." as t %}` + `'{{ t|escapejs }}'` inside script/attribute JS.
-  Avoid `%` in `{% translate %}` template strings (extraction doubles it to `%%`);
-  use `{n}`-style placeholders with a JS `.replace()` instead.
-- Sidebar buckets are keyed by stable ids (`today`/`yesterday`/`week`/`earlier`);
-  only `GROUP_LABELS` (lazy) is translated at render.
-
-### Authorization model
-
-- Per-resource ownership: conversations/agents/messages/personas are scoped to
-  `request.user` in the queryset (`_owned_*`, and `Persona`/`SharedPersona` filters) so
-  IDOR returns 404.
-- Workspace admin actions — `invite_member`, `set_role`, `remove_member` — require
-  `request.user.role == Admin` (`_is_admin`); admins can't change/remove **themselves**.
-  `unshare_persona` is restricted to the persona's author, with an admin override.
-- `switch_user` is account impersonation kept **only as a local demo affordance**: it
-  returns 403 unless `settings.DEBUG`, and its "Switch account" UI is hidden when not in
-  DEBUG. It must never be exposed in a real deployment.
-- Invited members get a random (`secrets.token_urlsafe`) password, not a shared one — a
-  real product would email a set-password/invite token instead. The *seeded* demo users
-  (`manage.py seed`) deliberately use `demo` so you can sign in locally.
-- The UI hides controls a user can't use (admin-only invite form / role+remove controls),
-  but the server enforces it regardless.
-
-### Known scope cuts (vs. the prototype)
-
-- File attachments are UI-only in the prototype (name/size metadata); not implemented here.
-
-<!-- SPECKIT START -->
-## Active feature plan
-
-- `002-i18n-support` — plan: [specs/002-i18n-support/plan.md](specs/002-i18n-support/plan.md)
-<!-- SPECKIT END -->
+- Single-user by design; the web era's workspace features (members, roles,
+  invites) have no equivalent here.
+- **Attachments**: doc/docx/pdf/md/txt/csv + png/jpg can be attached to the
+  shared prompt (`Conversation.attachments`), a single agent's prompt
+  (`Agent.attachments`) and chat messages (`Message.attachments`). Files are
+  picked via `att:pick` (native dialog, ≤20 MB), imported into
+  `userData/attachments/` by `src/main/attachments.ts` — doc/docx reduced to
+  text with `word-extractor` (devDependency, bundled into dist/main), other
+  documents stored as UTF-8, images/PDF as raw bytes. At request time the
+  renderer (`src/renderer/attachments.ts`) inlines text docs into the
+  system/user text and sends images (`image_url`) and PDFs (`file` part) as
+  base64 data URLs to OpenRouter. Payload files are reference-counted:
+  detach/clear/delete GC them (`store.gcAttachments`), plus an orphan sweep
+  at startup.

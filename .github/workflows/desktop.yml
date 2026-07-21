@@ -1,0 +1,56 @@
+name: Desktop builds
+
+# Electron desktop packages via Bun + electron-builder. Manual trigger,
+# plus version tags. Store submission (Mac App Store pkg / Microsoft Store
+# appx) needs the owner's certificates and identities — see PACKAGING.md.
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: macos-latest
+            artifact: Strophae-macos
+            path: |
+              release/*.dmg
+              release/*-mac.zip
+          - os: windows-latest
+            artifact: Strophae-windows
+            path: release/*.zip
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Typecheck
+        run: bunx tsc --noEmit
+
+      - name: Unit tests
+        run: bun test
+
+      - name: Bundle
+        run: bun run build
+
+      - name: Smoke-test the app
+        run: bunx electron . --check
+        env:
+          ELECTRON_RUN_AS_NODE: ''
+
+      - name: Package
+        run: bunx electron-builder --publish never
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.path }}

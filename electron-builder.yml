@@ -1,0 +1,46 @@
+# Packaging for distribution — including the stores.
+#
+#   bunx electron-builder            # local platform artifacts (release/)
+#   bunx electron-builder --mac mas  # Mac App Store .pkg (needs your certs +
+#                                    # a provisioning profile, see PACKAGING.md)
+#   bunx electron-builder --win appx # Microsoft Store .appx (fill the
+#                                    # identity placeholders from Partner
+#                                    # Center first)
+
+appId: app.strophae.desktop
+productName: Strophae
+copyright: © 2026 Matteo Costa
+
+directories:
+  buildResources: packaging
+  output: release
+
+# Everything the app needs at runtime is bundled into dist/ by Bun; all
+# npm packages are devDependencies, so none are packaged.
+files:
+  - dist/**
+  - package.json
+
+npmRebuild: false
+
+mac:
+  category: public.app-category.productivity
+  icon: packaging/icon.icns
+  target: [zip, dmg]
+
+mas:
+  entitlements: packaging/entitlements.mas.plist
+  entitlementsInherit: packaging/entitlements.mas.inherit.plist
+  hardenedRuntime: false
+
+win:
+  icon: packaging/icon.ico
+  target: [zip]
+
+appx:
+  # Fill from Partner Center > Product management > Product identity.
+  identityName: REPLACE.WITH.IDENTITY.NAME
+  publisher: CN=REPLACE-WITH-PUBLISHER-GUID
+  publisherDisplayName: REPLACE WITH PUBLISHER DISPLAY NAME
+  backgroundColor: '#1a1a20'
+  languages: [en-US, it-IT]
