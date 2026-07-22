@@ -8,7 +8,7 @@ description: "Task list template for feature implementation"
 **Input**: Design documents from `/specs/[###-feature-name]/`
 **Prerequisites**: plan.md (required), spec.md (required for user stories), research.md, data-model.md, contracts/
 
-**Tests**: MANDATORY per Constitution Principle II (Test-First Coverage). Every feature MUST include `pytest` unit tasks covering its behavior; no feature is complete until its tests exist and pass.
+**Tests**: MANDATORY per Constitution Principle II (Test-First Coverage). Every feature MUST include `bun test` unit tasks covering its behavior; no feature is complete until its tests exist and pass.
 
 **Organization**: Tasks are grouped by user story to enable independent implementation and testing of each story.
 

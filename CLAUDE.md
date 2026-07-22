@@ -10,11 +10,6 @@ parallel to several agents — each with its own name, colour, model and system
 prompt — and every agent answers in its own column, streaming live. The
 visual identity comes from a `claude.ai/design` prototype.
 
-History: this repo has been through three incarnations — Django+htmx web
-app → native Qt (PySide6) desktop app → the current Electron app. The
-earlier implementations live only in git history; recover any piece with
-`git checkout <commit> -- <path>`.
-
 ## Stack & commands
 
 **Bun** is the package manager, bundler (`Bun.build`) and test runner;
