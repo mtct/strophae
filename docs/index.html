@@ -1,0 +1,466 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>strophae — one prompt, many minds</title>
+<meta name="description" content="strophae is a free desktop app for macOS and Windows that broadcasts one prompt to a council of AI agents — each with its own model, persona and colour — and streams every answer side by side.">
+<meta property="og:title" content="strophae — one prompt, many minds">
+<meta property="og:description" content="A desktop app that sends one prompt to several AI agents at once and streams their answers in parallel columns. Free, open source, local-first.">
+<meta property="og:image" content="https://mtct.github.io/strophae/icon.png">
+<meta property="og:type" content="website">
+<link rel="icon" type="image/png" href="icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  /* ——— tokens: the app's own visual identity (src/renderer/styles.css + theme.ts) */
+  :root {
+    --bg: #f7f7f8;
+    --panel: #ffffff;
+    --border: #e5e5ea;
+    --text: #1a1a20;
+    --muted: #8a8a94;
+    --faint: #c6c6cc;
+    --font: 'Hanken Grotesk', 'Helvetica Neue', 'Segoe UI', system-ui, sans-serif;
+    --mono: 'IBM Plex Mono', 'Menlo', 'Consolas', monospace;
+    /* per-agent accents — hex fallbacks, exact oklch below */
+    --blue: #3e7bd6;   --blue-head: #fbfcfe;
+    --purple: #a458c0; --purple-head: #fdfbfe;
+    --green: #2c9d64;  --green-head: #fbfdfc;
+  }
+  @supports (color: oklch(0.5 0.1 200)) {
+    :root {
+      --blue: oklch(0.58 0.15 255);   --blue-head: oklch(0.992 0.018 255);
+      --purple: oklch(0.58 0.15 310); --purple-head: oklch(0.992 0.018 310);
+      --green: oklch(0.58 0.15 150);  --green-head: oklch(0.992 0.018 150);
+    }
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: var(--font);
+    font-size: 16px;
+    line-height: 1.6;
+    color: var(--text);
+    background: var(--bg);
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: inherit; }
+  :focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; border-radius: 4px; }
+
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+
+  /* ——— header */
+  header { border-bottom: 1px solid var(--border); background: var(--bg); }
+  .nav { display: flex; align-items: center; gap: 24px; height: 60px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-size: 20px; font-weight: 700; letter-spacing: -0.5px; text-decoration: none; }
+  .brand img { width: 26px; height: 26px; border-radius: 7px; }
+  .nav nav { margin-left: auto; display: flex; align-items: center; gap: 4px; }
+  .nav nav a {
+    text-decoration: none; color: var(--muted); font-size: 14px; font-weight: 500;
+    padding: 6px 12px; border-radius: 8px;
+  }
+  .nav nav a:hover { color: var(--text); background: var(--panel); }
+  .nav nav a.gh {
+    color: #fff; background: var(--text); font-weight: 600; margin-left: 8px;
+  }
+  .nav nav a.gh:hover { background: #33333c; }
+
+  /* ——— hero */
+  .hero { padding: 88px 0 40px; }
+  .eyebrow {
+    font-family: var(--mono); font-size: 12px; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--muted); margin: 0 0 20px;
+  }
+  h1 {
+    font-size: clamp(2.5rem, 7vw, 4.3rem);
+    font-weight: 800; letter-spacing: -0.035em; line-height: 1.02;
+    margin: 0 0 22px; max-width: 14em;
+  }
+  h1 .dots { white-space: nowrap; }
+  h1 .dot { display: inline-block; width: 0.42em; height: 0.42em; border-radius: 50%; margin-left: 0.14em; vertical-align: 0.06em; }
+  .hero p.lede { font-size: 19px; color: var(--text); max-width: 36em; margin: 0 0 30px; }
+  .hero p.lede strong { font-weight: 600; }
+  .cta { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+  .btn {
+    display: inline-block; text-decoration: none; font-size: 15px; font-weight: 600;
+    padding: 11px 20px; border-radius: 10px; border: 1px solid var(--border); background: var(--panel);
+  }
+  .btn:hover { background: var(--bg); }
+  .btn.primary { background: var(--text); color: #fff; border-color: var(--text); }
+  .btn.primary:hover { background: #33333c; }
+  .cta .free { font-size: 13px; color: var(--muted); }
+
+  /* ——— the chorus demo (faithful chat-view chrome) */
+  .demo { padding: 34px 0 96px; }
+  .window {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 14px;
+    box-shadow: 0 24px 60px -30px rgba(26,26,32,0.25), 0 2px 8px rgba(26,26,32,0.04);
+    overflow: hidden;
+  }
+  .titlebar {
+    display: flex; align-items: center; height: 40px; padding: 0 14px;
+    border-bottom: 1px solid var(--border); position: relative;
+  }
+  .titlebar .lights { display: flex; gap: 7px; }
+  .titlebar .lights span { width: 11px; height: 11px; border-radius: 50%; background: var(--border); }
+  .titlebar .title {
+    position: absolute; left: 0; right: 0; text-align: center;
+    font-family: var(--mono); font-size: 11.5px; color: var(--muted); pointer-events: none;
+  }
+  .stage { background: var(--bg); padding: 14px; }
+  .columns { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+  .col {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    overflow: hidden; display: flex; flex-direction: column;
+  }
+  .hue-blue   { --accent: var(--blue);   --head: var(--blue-head); }
+  .hue-purple { --accent: var(--purple); --head: var(--purple-head); }
+  .hue-green  { --accent: var(--green);  --head: var(--green-head); }
+  .adot, .dot, .section-mark span { background: var(--accent); }
+  .col .col-body { background: linear-gradient(var(--head), var(--panel) 52px); }
+  .col-head {
+    display: flex; align-items: baseline; gap: 8px; padding: 9px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .col-head .adot { width: 7px; height: 7px; border-radius: 50%; flex: none; align-self: center; }
+  .col-head .aname { font-size: 13px; font-weight: 700; }
+  .col-head .amodel { font-family: var(--mono); font-size: 11px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .col-body { padding: 12px; font-size: 13.5px; line-height: 1.55; flex: 1; }
+  .user-pill {
+    display: block; width: fit-content; margin: 0 0 12px auto; max-width: 92%;
+    background: var(--bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 6px 10px; font-size: 12.5px; color: var(--text);
+  }
+  .answer { min-height: 10.5em; color: var(--text); }
+  .answer .caret { display: inline-block; width: 0.55em; height: 1em; vertical-align: -0.12em; border-radius: 1px; animation: blink 1s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+  .promptbar { display: flex; gap: 10px; align-items: stretch; margin-top: 12px; }
+  .promptbar .clip { align-self: center; color: var(--faint); flex: none; }
+  .promptbar .box {
+    flex: 1; background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: 10px 12px; font-size: 13.5px; color: var(--text); display: flex; align-items: center;
+  }
+  .promptbar .send {
+    background: var(--text); color: #fff; border-radius: 10px; font-size: 13.5px;
+    font-weight: 600; display: flex; align-items: center; padding: 0 22px;
+  }
+  .demo-caption { text-align: center; font-size: 13.5px; color: var(--muted); margin: 18px 0 0; }
+
+  /* ——— sections */
+  section { padding: 88px 0; }
+  section + section { border-top: 1px solid var(--border); }
+  .section-mark { display: flex; gap: 5px; margin-bottom: 18px; }
+  .section-mark span { width: 8px; height: 8px; border-radius: 50%; }
+  h2 { font-size: clamp(1.7rem, 3.5vw, 2.3rem); font-weight: 800; letter-spacing: -0.025em; line-height: 1.1; margin: 0 0 14px; }
+  .section-lede { font-size: 17px; color: var(--muted); max-width: 40em; margin: 0 0 40px; }
+
+  /* features */
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+    padding: 22px 22px 24px;
+  }
+  .card h3 { font-size: 16px; font-weight: 700; margin: 0 0 8px; letter-spacing: -0.01em; }
+  .card p { font-size: 14.5px; color: var(--muted); margin: 0; }
+  .card .tag {
+    font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.07em; text-transform: uppercase;
+    color: var(--muted); display: block; margin-bottom: 14px;
+  }
+
+  /* chorus aside */
+  .chorus { text-align: center; }
+  .chorus .greek {
+    font-family: var(--mono); font-size: clamp(1.6rem, 4vw, 2.4rem); letter-spacing: 0.18em;
+    color: var(--muted); margin: 0 0 18px;
+  }
+  .chorus p { max-width: 34em; margin: 0 auto; font-size: 17px; color: var(--text); }
+  .chorus p em { color: var(--muted); }
+
+  /* privacy band */
+  .band { background: var(--text); color: #fff; border-radius: 16px; padding: 52px 48px; }
+  .band h2 { color: #fff; }
+  .band .facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; margin-top: 34px; }
+  .band .facts h3 { font-size: 15px; font-weight: 700; margin: 0 0 6px; }
+  .band .facts p { font-size: 14px; color: #b9b9c2; margin: 0; }
+  .band .facts code { font-family: var(--mono); font-size: 12.5px; color: #d9d9e0; }
+
+  /* run from source */
+  .source .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: start; }
+  pre.term {
+    background: var(--text); color: #e9e9ee; border-radius: 12px; padding: 22px 24px;
+    font-family: var(--mono); font-size: 13.5px; line-height: 1.9; overflow-x: auto; margin: 0;
+  }
+  pre.term .c { color: #8a8a94; }
+  .source p { font-size: 15px; color: var(--muted); margin: 0 0 14px; }
+  .source p code { font-family: var(--mono); font-size: 13px; color: var(--text); background: var(--panel); border: 1px solid var(--border); border-radius: 5px; padding: 1px 5px; }
+
+  /* footer */
+  footer { border-top: 1px solid var(--border); padding: 36px 0 48px; }
+  .foot { display: flex; flex-wrap: wrap; gap: 10px 28px; align-items: center; font-size: 13.5px; color: var(--muted); }
+  .foot .brand { font-size: 15px; }
+  .foot a { color: var(--muted); }
+  .foot a:hover { color: var(--text); }
+  .foot .spacer { flex: 1; }
+  .foot img { border-radius: 5px; }
+
+  /* ——— responsive */
+  @media (max-width: 860px) {
+    .columns, .grid, .band .facts, .source .grid2 { grid-template-columns: 1fr; }
+    .answer { min-height: 0; }
+    .band { padding: 36px 26px; }
+    .hero { padding-top: 56px; }
+    section { padding: 64px 0; }
+    .nav nav a:not(.gh) { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    .answer .caret { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap nav">
+    <a class="brand" href="#"><img src="icon.png" alt="" width="26" height="26">strophae</a>
+    <nav>
+      <a href="#features">Features</a>
+      <a href="#privacy">Privacy</a>
+      <a href="#source">Run it</a>
+      <a class="gh" href="https://github.com/mtct/strophae">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="wrap hero">
+    <p class="eyebrow">Free &amp; open source · macOS &amp; Windows</p>
+    <h1>One prompt, many <span class="dots">minds<span class="dot hue-blue"></span><span class="dot hue-purple"></span><span class="dot hue-green"></span></span></h1>
+    <p class="lede">strophae is a desktop app that broadcasts a single prompt to a
+    <strong>council of AI agents</strong> — each with its own name, model, colour and
+    system prompt — and streams every answer live, side by side. Same question,
+    different minds, one screen.</p>
+    <div class="cta">
+      <a class="btn primary" href="https://github.com/mtct/strophae">Get strophae on GitHub</a>
+      <a class="btn" href="#source">Run from source</a>
+      <span class="free">MIT licensed · your OpenRouter key, your data</span>
+    </div>
+  </div>
+
+  <div class="wrap demo" id="demo">
+    <div class="window" aria-label="strophae chat view: three agents answering the same prompt in parallel">
+      <div class="titlebar">
+        <div class="lights" aria-hidden="true"><span></span><span></span><span></span></div>
+        <div class="title">strophae — Rust rewrite council</div>
+      </div>
+      <div class="stage">
+        <div class="columns">
+          <div class="col hue-blue">
+            <div class="col-head">
+              <span class="adot"></span>
+              <span class="aname">Pragmatist</span>
+              <span class="amodel">GPT-4o</span>
+            </div>
+            <div class="col-body">
+              <span class="user-pill">Should we rewrite it in Rust?</span>
+              <p class="answer" data-answer="Not all of it. Profile first — if the hot path is the parser, rewrite the parser. A full rewrite trades two years of accumulated bug fixes for a feeling of safety you could get module by module."></p>
+            </div>
+          </div>
+          <div class="col hue-purple">
+            <div class="col-head">
+              <span class="adot"></span>
+              <span class="aname">Devil's advocate</span>
+              <span class="amodel">Claude Opus 4.1</span>
+            </div>
+            <div class="col-body">
+              <span class="user-pill">Should we rewrite it in Rust?</span>
+              <p class="answer" data-answer="Wrong question. Nobody opened an issue about speed — the tracker is full of onboarding friction. A rewrite is the most expensive way to procrastinate on the problems users actually have."></p>
+            </div>
+          </div>
+          <div class="col hue-green">
+            <div class="col-head">
+              <span class="adot"></span>
+              <span class="aname">Enthusiast</span>
+              <span class="amodel">Gemini 2.5 Pro</span>
+            </div>
+            <div class="col-body">
+              <span class="user-pill">Should we rewrite it in Rust?</span>
+              <p class="answer" data-answer="Yes — start with the CLI. Small surface, real wins: a single static binary, instant startup, and the team learns the borrow checker on low-stakes code before touching the core."></p>
+            </div>
+          </div>
+        </div>
+        <div class="promptbar" aria-hidden="true">
+          <svg class="clip" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.5l-8.5 8.5a6 6 0 01-8.5-8.5L12.5 4a4 4 0 015.7 5.7L9.7 18.2a2 2 0 01-2.8-2.8L15 7.3"/></svg>
+          <div class="box">Should we rewrite it in Rust?</div>
+          <div class="send">Send</div>
+        </div>
+      </div>
+    </div>
+    <p class="demo-caption">The chat view: one send fans out to every agent, every column streams at once.</p>
+  </div>
+
+  <section id="features">
+    <div class="wrap">
+      <div class="section-mark" aria-hidden="true"><span class="hue-blue"></span><span class="hue-purple"></span><span class="hue-green"></span></div>
+      <h2>Compose your council</h2>
+      <p class="section-lede">Stop retyping the same question into four chat tabs.
+      Give each seat at the table a voice, then ask once.</p>
+      <div class="grid">
+        <div class="card">
+          <span class="tag">Streaming</span>
+          <h3>Every agent answers at once</h3>
+          <p>One send fans out to the whole council in parallel. Tokens arrive live in each column — compare answers as they form, not after.</p>
+        </div>
+        <div class="card">
+          <span class="tag">Personas</span>
+          <h3>Agents with a point of view</h3>
+          <p>Name, colour, model and system prompt per agent. Save the good ones as personas and seat them again in the next session.</p>
+        </div>
+        <div class="card">
+          <span class="tag">Models</span>
+          <h3>Any model, one key</h3>
+          <p>Powered by OpenRouter: GPT, Claude, Gemini, Llama, DeepSeek, Mistral and hundreds more. The model list is yours to edit in Settings.</p>
+        </div>
+        <div class="card">
+          <span class="tag">Attachments</span>
+          <h3>Bring your documents</h3>
+          <p>Attach PDF, Word, Markdown, CSV or images — to the shared context every agent sees, to a single agent's brief, or to one message.</p>
+        </div>
+        <div class="card">
+          <span class="tag">Rich replies</span>
+          <h3>Beyond plain text</h3>
+          <p>Mermaid code fences render as real diagrams inside the column, and image models stream pictures straight into the conversation.</p>
+        </div>
+        <div class="card">
+          <span class="tag">i18n</span>
+          <h3>In your language</h3>
+          <p>The interface speaks English and Italian, following your OS. Your words and the models' replies are never translated behind your back.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="chorus" aria-label="Why the name strophae">
+    <div class="wrap">
+      <p class="greek" aria-hidden="true">στροφή</p>
+      <p>In Greek drama the chorus turned as one and answered the scene in
+      <em>strophes</em> — many voices, one line to answer. <strong>strophae</strong> is
+      that chorus for your questions: several minds, turning together.</p>
+    </div>
+  </section>
+
+  <section id="privacy">
+    <div class="wrap">
+      <div class="band">
+        <h2>No accounts. No server. No telemetry.</h2>
+        <div class="facts">
+          <div>
+            <h3>Local by design</h3>
+            <p>Sessions, agents and attachments live in a single JSON document in your user folder. Delete the folder, and strophae never knew you.</p>
+          </div>
+          <div>
+            <h3>Your key, in the keychain</h3>
+            <p>The OpenRouter API key is encrypted at rest with the OS keychain (<code>safeStorage</code>) and is only ever sent to OpenRouter.</p>
+          </div>
+          <div>
+            <h3>One outbound host</h3>
+            <p>The renderer's Content-Security-Policy allows exactly one network destination: <code>openrouter.ai</code>. Nothing else leaves the app.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="source" class="source">
+    <div class="wrap">
+      <div class="section-mark" aria-hidden="true"><span class="hue-blue"></span><span class="hue-purple"></span><span class="hue-green"></span></div>
+      <h2>Run it in a minute</h2>
+      <div class="grid2">
+        <div>
+          <p>strophae is built with <strong>Electron, Bun and React</strong>. All you
+          need is <a href="https://bun.sh">Bun</a> — clone, install, start.</p>
+          <p>To talk to real models, open <strong>Settings</strong> and paste an
+          OpenRouter key (<code>sk-or-…</code>, from
+          <a href="https://openrouter.ai/keys">openrouter.ai/keys</a>).</p>
+          <p>Packaged desktop builds — macOS dmg, Windows zip, plus Mac App Store and
+          Microsoft Store targets — come from CI; see
+          <a href="https://github.com/mtct/strophae/blob/main/PACKAGING.md">PACKAGING.md</a>.</p>
+        </div>
+        <pre class="term"><span class="c"># macOS · Windows · needs bun.sh</span>
+git clone https://github.com/mtct/strophae
+cd strophae
+bun install
+bun run start</pre>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap foot">
+    <span class="brand"><img src="icon.png" alt="" width="20" height="20">strophae</span>
+    <span>MIT License · Matteo Costa</span>
+    <span class="spacer"></span>
+    <a href="https://github.com/mtct/strophae">Source on GitHub</a>
+    <span>Electron + Bun + React</span>
+  </div>
+</footer>
+
+<script>
+  // The chorus demo: stream each column's answer word by word, in parallel,
+  // like tokens arriving from three different models. Loops while visible.
+  (function () {
+    var reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var answers = Array.prototype.slice.call(document.querySelectorAll('.answer'));
+    if (reduced || !('IntersectionObserver' in window)) {
+      answers.forEach(function (el) { el.textContent = el.dataset.answer; });
+      return;
+    }
+    var running = false, visible = false, timers = [];
+    function clearTimers() { timers.forEach(clearTimeout); timers = []; }
+    function stream(el, done) {
+      var words = el.dataset.answer.match(/\S+\s*/g) || [];
+      var caret = document.createElement('span');
+      caret.className = 'caret';
+      caret.style.background = 'var(--accent)';
+      var textNode = document.createTextNode('');
+      el.textContent = '';
+      el.appendChild(textNode);
+      el.appendChild(caret);
+      var i = 0;
+      (function tick() {
+        if (!visible) return;
+        if (i < words.length) {
+          textNode.data += words[i++];
+          timers.push(setTimeout(tick, 40 + Math.random() * 110));
+        } else {
+          caret.remove();
+          done();
+        }
+      })();
+    }
+    function run() {
+      if (running || !visible) return;
+      running = true;
+      var pending = answers.length;
+      answers.forEach(function (el) {
+        stream(el, function () {
+          if (--pending === 0) {
+            timers.push(setTimeout(function () { running = false; run(); }, 6000));
+          }
+        });
+      });
+    }
+    new IntersectionObserver(function (entries) {
+      visible = entries[0].isIntersecting;
+      if (visible) { run(); } else { clearTimers(); running = false; }
+    }, { threshold: 0.25 }).observe(document.querySelector('.window'));
+  })();
+</script>
+
+</body>
+</html>
