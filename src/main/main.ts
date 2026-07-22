@@ -5,10 +5,11 @@
 // screenshots, exit 0/1. Mirrors the verification mode of the previous
 // native builds.
 
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, session } from 'electron';
 
 import { registerIpc } from './ipc';
 import { Store } from './store';
@@ -17,6 +18,12 @@ const CHECK = process.argv.includes('--check');
 const shotsDir = CHECK
   ? process.argv[process.argv.indexOf('--check') + 1]
   : undefined;
+
+// The self-test must never touch (or screenshot) the real profile: give it
+// a throwaway userData so it always walks a fresh, seeded store.
+if (CHECK) {
+  app.setPath('userData', mkdtempSync(join(tmpdir(), 'strophae-check-')));
+}
 
 let store: Store;
 
@@ -40,14 +47,27 @@ function createWindow(): BrowserWindow {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
+      // The hidden self-test window must keep timers and painting live,
+      // or its scripted walk stalls under Chromium's throttling.
+      backgroundThrottling: !CHECK,
     },
   });
+  // The renderer displays untrusted LLM output; it must never open
+  // windows or leave the bundled index.html.
+  win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  win.webContents.on('will-navigate', (e) => e.preventDefault());
   win.loadFile('dist/renderer/index.html',
     CHECK ? { query: { check: '1' } } : undefined);
   return win;
 }
 
 app.whenReady().then(() => {
+  // Chromium permissions: only the clipboard write behind "Export"
+  // is ever legitimate; geolocation, media, notifications etc. are not.
+  session.defaultSession.setPermissionRequestHandler(
+    (_wc, permission, callback) =>
+      callback(permission === 'clipboard-sanitized-write'));
+
   const dir = app.getPath('userData');
   store = new Store(dir, osLanguage());
   registerIpc(store, dir, osLanguage());
