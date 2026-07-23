@@ -72,6 +72,8 @@ export function registerIpc(store: Store, dir: string,
     store.clearThread(agentId));
   ipcMain.handle('persona:save', (_e, agentId: number) =>
     store.savePersona(agentId));
+  ipcMain.handle('persona:delete', (_e, personaId: number) =>
+    store.deletePersona(personaId));
 
   ipcMain.handle('msg:send',
     (_e, convId: number, text: string, atts: Attachment[] = []) =>

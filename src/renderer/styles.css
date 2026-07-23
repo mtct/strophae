@@ -123,16 +123,22 @@ textarea { resize: none; }
 /* -------------------------------------------------------------- compose */
 
 .shared-input { height: 64px; }
+/* Persona cards never scroll sideways: once a row is full the next card
+   wraps underneath, and a tall grid scrolls vertically instead. */
 .cards {
   flex: 1;
+  min-height: 0;
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
-  overflow-x: auto;
+  overflow-y: auto;
   align-items: flex-start;
+  align-content: flex-start;
   padding: 4px 0;
 }
 .agent-card {
   width: 280px;
+  max-width: 100%; /* shrink rather than overflow a very narrow window */
   flex: none;
   background: var(--panel);
   border: 1px solid var(--border);
@@ -397,6 +403,7 @@ textarea { resize: none; }
   top: calc(100% + 4px);
   left: 0;
   min-width: 200px;
+  max-width: 340px;
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -415,6 +422,39 @@ textarea { resize: none; }
 }
 .menu button:hover { background: var(--bg); }
 .menu .disabled { color: var(--faint); cursor: default; }
+/* A library row: pick the persona on the left, delete it on the right. */
+.menu-row { display: flex; align-items: center; gap: 2px; }
+.menu-row > button:first-child {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.menu-row .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+}
+/* Keep every entry on one line; the menu grows to fit, then ellipses. */
+.menu-row .row-name {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.menu-row .row-model { color: var(--muted); font-size: 11px; }
+.menu-row .row-x {
+  width: 26px;
+  flex: none;
+  text-align: center;
+  padding: 7px 0;
+  color: var(--faint);
+  font-size: 10px;
+}
+.menu-row .row-x:hover { color: var(--text); }
 /* Drop-up variant for anchors near the bottom edge of the window. */
 .menu.up { top: auto; bottom: calc(100% + 4px); }
 

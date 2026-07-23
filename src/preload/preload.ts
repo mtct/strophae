@@ -16,6 +16,7 @@ const api = {
   removeAgent: invoke('agent:remove'),
   clearThread: invoke('agent:clear'),
   savePersona: invoke('persona:save'),
+  deletePersona: invoke('persona:delete'),
   sendMessage: invoke('msg:send'),
   finalizeMessage: invoke('msg:finalize'),
   pickAttachments: invoke('att:pick'),

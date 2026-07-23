@@ -223,13 +223,32 @@ export function ComposePage(props: {
                 <button className="disabled">{t('no_personas_yet')}</button>
               )}
               {props.personas.map((p) => (
-                <button key={p.id} onClick={async () => {
-                  setLibraryOpen(false);
-                  await api.addAgentFromPersona(conv.id, p.id);
-                  props.onChanged();
-                }}>
-                  {p.name} · {p.model}
-                </button>
+                <div key={p.id} className="menu-row">
+                  <button onClick={async () => {
+                    setLibraryOpen(false);
+                    await api.addAgentFromPersona(conv.id, p.id);
+                    props.onChanged();
+                  }}>
+                    <span className="dot"
+                          style={{ background: accent(p.hue) }} />
+                    <span className="row-name">
+                      {p.name} <span className="row-model">{p.model}</span>
+                    </span>
+                  </button>
+                  {/* Deleting only drops the library entry: agents already
+                      built from this persona keep their own copy. */}
+                  <button
+                    className="row-x"
+                    title={t('delete_persona')}
+                    onClick={async () => {
+                      await api.deletePersona(p.id);
+                      props.onToast(t('persona_deleted'));
+                      props.onChanged();
+                    }}
+                  >
+                    ✕
+                  </button>
+                </div>
               ))}
             </div>
           )}

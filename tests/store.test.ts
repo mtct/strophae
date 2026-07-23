@@ -114,6 +114,59 @@ describe('agents & personas', () => {
       .toBe('audio');
   });
 
+  test('a fresh store seeds the six thinking hats in hat order', () => {
+    const names = store.personas().map((p) => p.name);
+    expect(names).toEqual([
+      'White Hat — Facts',
+      'Red Hat — Feelings',
+      'Black Hat — Caution',
+      'Yellow Hat — Benefits',
+      'Green Hat — Creativity',
+      'Blue Hat — Process',
+    ]);
+    const white = store.personas()[0]!;
+    expect(white.personaType).toBe('white_hat');
+    expect(white.modality).toBe('text');
+    expect(white.systemPrompt).toContain('facts');
+    // Distinct accents, so the hats are told apart in the library.
+    expect(new Set(store.personas().map((p) => p.hue)).size).toBe(6);
+  });
+
+  test('the seeded hats are materialised in the store language', () => {
+    const itStore = new Store(mkdtempSync(join(tmpdir(), 'strophae-')), 'it');
+    expect(itStore.personas()[0]!.name).toBe('Cappello Bianco — Fatti');
+  });
+
+  test('a seeded hat can be added to a session like any persona', () => {
+    const conv = store.createSession();
+    const black = store.personas().find((p) => p.personaType === 'black_hat')!;
+    const agent = store.addAgentFromPersona(conv.id, black.id);
+    expect(agent.name).toBe('Black Hat — Caution');
+    expect(agent.hue).toBe(black.hue);
+    expect(agent.systemPrompt).toBe(black.systemPrompt);
+  });
+
+  test('deleting a persona removes it and never re-seeds it', () => {
+    const doomed = store.personas()[0]!;
+    store.deletePersona(doomed.id);
+    expect(store.personas()).toHaveLength(5);
+    expect(store.personas().some((p) => p.id === doomed.id)).toBe(false);
+    store.flush();
+    // A later run must not resurrect the deleted library entry.
+    expect(new Store(dir, 'en').personas()).toHaveLength(5);
+  });
+
+  test('deleting a persona leaves agents built from it untouched', () => {
+    const conv = store.createSession();
+    const hat = store.personas()[0]!;
+    const agent = store.addAgentFromPersona(conv.id, hat.id);
+    store.deletePersona(hat.id);
+    const kept = store.conversation(conv.id).agents
+      .find((a) => a.id === agent.id)!;
+    expect(kept.name).toBe(hat.name);
+    expect(kept.systemPrompt).toBe(hat.systemPrompt);
+  });
+
   test('legacy documents backfill modality from the model slug', () => {
     const legacy = mkdtempSync(join(tmpdir(), 'strophae-'));
     writeFileSync(join(legacy, 'strophae.json'), JSON.stringify({
@@ -133,7 +186,7 @@ describe('agents & personas', () => {
     }));
     const migrated = new Store(legacy, 'en');
     expect(migrated.conversation(1).agents[0]!.modality).toBe('image');
-    expect(migrated.personas()[0]!.modality).toBe('audio');
+    expect(migrated.personas().find((p) => p.id === 3)!.modality).toBe('audio');
     rmSync(legacy, { recursive: true, force: true });
   });
 });

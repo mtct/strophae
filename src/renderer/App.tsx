@@ -77,8 +77,28 @@ export function App() {
     await new Promise((r) => setTimeout(r, 100));
     report['persona menu opens'] =
       document.querySelector('.menu.up') !== null;
+    // The Six Thinking Hats library ships seeded, each row deletable.
+    report['persona library seeded'] =
+      document.querySelectorAll('.menu.up .menu-row').length >= 6;
+    report['persona delete control'] =
+      document.querySelector('.menu.up .menu-row .row-x') !== null;
     await api.checkShot('compose');
     libraryBtn?.click();
+    // Fill the compose grid past one row: cards must wrap underneath
+    // rather than scroll the page sideways.
+    const addBtn = document.querySelector<HTMLButtonElement>(
+      '.compose-bottom button');
+    for (let i = 0; i < 4; i++) {
+      addBtn?.click();
+      await new Promise((r) => setTimeout(r, 80));
+    }
+    await new Promise((r) => setTimeout(r, 250));
+    const grid = document.querySelector<HTMLElement>('.cards');
+    const cards = document.querySelectorAll<HTMLElement>('.agent-card');
+    report['persona cards wrap'] = grid !== null && cards.length >= 5
+      && grid.scrollWidth <= grid.clientWidth
+      && cards[cards.length - 1]!.offsetTop > cards[0]!.offsetTop;
+    await api.checkShot('compose-wrapped');
     setView({ page: 'chat', convId: draft.id });
     await new Promise((r) => setTimeout(r, 250));
     report['chat rendered'] = document.querySelector('.chat-page') !== null;

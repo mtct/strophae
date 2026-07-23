@@ -42,9 +42,10 @@ the renderer CSP in `src/renderer/index.html`).
 src/shared/    types.ts (domain model, Modality) · models.ts (DEFAULT_MODELS
                seed, modelSlug(label, models), supportsImageOutput/
                supportsAudioOutput, defaultModality, HUE_PALETTE, default
-               agent, title rules) · fences.ts (```mermaid block parser) ·
-               audio.ts (streamed PCM16 → WAV data URL) · time.ts (sidebar
-               recency buckets) · i18n.ts (en/it catalogs, translate())
+               agent, title rules) · personas.ts (SIX_HATS seed library) ·
+               fences.ts (```mermaid block parser) · audio.ts (streamed
+               PCM16 → WAV data URL) · time.ts (sidebar recency buckets) ·
+               i18n.ts (en/it catalogs, translate())
 src/main/      main.ts (window, --check mode) · store.ts (persistence) ·
                ipc.ts (IPC surface + safeStorage API key) · attachments.ts
                (file import/extraction + payload files + GC)
@@ -77,6 +78,14 @@ packaging/     icons + Mac App Store entitlements (electron-builder
 - **Security posture**: `contextIsolation` + `sandbox` on, no
   `nodeIntegration`; renderer talks only through the typed preload bridge
   (`window.strophae`); strict CSP (connect-src limited to openrouter.ai).
+- **Persona library**: `store.seedPersonas()` materialises the Six Thinking
+  Hats (`src/shared/personas.ts`) once per document — names/prompts
+  translated at seed time then frozen like any other product default, one
+  palette hue per hat (white and black borrow the nearest readable hue,
+  since accents are fixed-lightness oklch). The `personasSeeded` flag makes
+  it one-shot, so personas deleted via `persona:delete` never come back.
+  Deleting a persona only drops the library entry — agents already created
+  from it keep their own copy of the name, prompt and colour.
 - **Models are user-configurable**: `Settings.models` (label + OpenRouter
   string) is seeded from `DEFAULT_MODELS` and edited in the Settings modal
   (add/remove; at least one entry, `settings:setModels`). Slug resolution

@@ -30,6 +30,7 @@ export interface StrophaeApi {
   removeAgent(agentId: number): Promise<void>;
   clearThread(agentId: number): Promise<void>;
   savePersona(agentId: number): Promise<Persona>;
+  deletePersona(personaId: number): Promise<void>;
   sendMessage(convId: number, text: string,
               attachments?: Attachment[]): Promise<SendResult>;
   finalizeMessage(messageId: number, text: string,

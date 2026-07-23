@@ -12,6 +12,7 @@ import {
   DEFAULT_AGENT, DEFAULT_MODELS, defaultModality, modelSlug, nextHue,
   titleFrom,
 } from '../shared/models';
+import { SIX_HATS } from '../shared/personas';
 import type {
   Agent,
   Attachment,
@@ -30,6 +31,9 @@ interface Data {
   conversations: Conversation[];
   personas: Persona[];
   settings: Settings;
+  /** Set once the Six Thinking Hats library has been materialised, so
+      deleting those personas does not bring them back on the next run. */
+  personasSeeded?: boolean;
 }
 
 const EMPTY: Data = {
@@ -48,7 +52,34 @@ export class Store {
     mkdirSync(dir, { recursive: true });
     this.file = join(dir, 'strophae.json');
     this.data = this.load();
+    this.seedPersonas();
     sweepAttachments(dir, this.referencedAttachmentIds());
+  }
+
+  /** Materialise the Six Thinking Hats library once, in the language in
+      force at that moment; from then on they are ordinary user personas,
+      editable and deletable like any other. */
+  private seedPersonas(): void {
+    if (this.data.personasSeeded) return;
+    const lang = this.lang();
+    const model = this.defaultModel();
+    // One timestamp for all six keeps them in hat order behind the
+    // newest-first sort (equal keys, stable sort).
+    const createdAt = this.now();
+    for (const hat of SIX_HATS) {
+      this.data.personas.push({
+        id: this.id(),
+        name: translate(lang, hat.nameKey),
+        hue: hat.hue,
+        model,
+        personaType: hat.personaType,
+        modality: 'text',
+        systemPrompt: translate(lang, hat.promptKey),
+        createdAt,
+      });
+    }
+    this.data.personasSeeded = true;
+    this.save();
   }
 
   private load(): Data {
@@ -267,6 +298,14 @@ export class Store {
     this.data.personas.push(persona);
     this.save();
     return persona;
+  }
+
+  /** Drop a saved persona from the library. Agents already created from it
+      keep their own copy of the name, prompt and colour. */
+  deletePersona(personaId: number): void {
+    this.data.personas =
+      this.data.personas.filter((p) => p.id !== personaId);
+    this.save();
   }
 
   // --------------------------------------------------------- attachments
