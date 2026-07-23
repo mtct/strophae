@@ -2,6 +2,8 @@
 // client's streamAgent(): fetch with stream:true, parse SSE lines, emit
 // each delta token. The key goes only to OpenRouter.
 
+import type { Modality } from '../shared/types';
+
 // Multimodal content parts (OpenRouter chat/completions schema): images as
 // base64 data URLs, PDFs as file parts. Text documents never appear as
 // parts — they are inlined into prompt text before the call.
@@ -15,11 +17,28 @@ export interface ChatMessage {
   content: string | ContentPart[];
 }
 
+/** Voice for audio-output models; a neutral default is fine for all. */
+export const DEFAULT_VOICE = 'alloy';
+
 export interface StreamOptions {
-  /** Ask OpenRouter for image output (diffusion models). */
-  imageOutput?: boolean;
+  /** What the agent should produce (default 'text'). Drives the request's
+      `modalities`: 'image' asks for pictures, 'audio' asks for speech. */
+  modality?: Modality;
   /** Fires once per generated image with its data: URL. */
   onImage?: (url: string) => void;
+  /** Fires per streamed audio chunk with base64 PCM16 (format 'pcm16'). */
+  onAudio?: (base64Pcm: string) => void;
+}
+
+function requestModalities(modality: Modality): object {
+  if (modality === 'image') return { modalities: ['image', 'text'] };
+  if (modality === 'audio') {
+    return {
+      modalities: ['audio', 'text'],
+      audio: { voice: DEFAULT_VOICE, format: 'pcm16' },
+    };
+  }
+  return {};
 }
 
 export async function streamAgent(
@@ -41,7 +60,7 @@ export async function streamAgent(
       model: slug,
       stream: true,
       messages,
-      ...(options.imageOutput ? { modalities: ['image', 'text'] } : {}),
+      ...requestModalities(options.modality ?? 'text'),
     }),
   });
   if (!resp.ok || !resp.body) {
@@ -76,6 +95,13 @@ export async function streamAgent(
           if (typeof url === 'string' && url.startsWith('data:image/')) {
             options.onImage?.(url);
           }
+        }
+        // Audio-output models stream delta.audio: a base64 PCM16 `data`
+        // chunk and/or a `transcript` fragment shown live as text.
+        const audio = delta?.audio;
+        if (audio?.transcript) onToken(audio.transcript);
+        if (typeof audio?.data === 'string' && audio.data) {
+          options.onAudio?.(audio.data);
         }
       } catch { /* partial frame */ }
     }

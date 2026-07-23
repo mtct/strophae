@@ -2,10 +2,17 @@
 
 export type Role = 'user' | 'assistant';
 
-// How an attachment travels to the model: images and PDFs go as base64
-// content parts; every document format (md/txt/csv, plus doc/docx after
-// extraction in the main process) is inlined as text.
-export type AttachmentKind = 'image' | 'pdf' | 'text';
+// What an agent is asked to produce. Chosen by the user when defining the
+// persona and sent to OpenRouter as the `modalities` request field: text
+// agents reply in prose, image agents return generated pictures, audio
+// agents return spoken audio (plus a streamed transcript).
+export type Modality = 'text' | 'image' | 'audio';
+
+// How an attachment travels to (or comes back from) the model: images and
+// PDFs go as base64 content parts; every document format (md/txt/csv, plus
+// doc/docx after extraction in the main process) is inlined as text; audio
+// covers model-generated replies stored as a playable file.
+export type AttachmentKind = 'image' | 'pdf' | 'text' | 'audio';
 
 export interface Attachment {
   id: number;
@@ -29,6 +36,7 @@ export interface Agent {
   hue: number;
   model: string; // display label; slug via modelSlug(label, models)
   personaType: string;
+  modality: Modality; // what the agent is asked to produce
   systemPrompt: string;
   order: number;
   messages: Message[];
@@ -51,6 +59,7 @@ export interface Persona {
   hue: number;
   model: string;
   personaType: string;
+  modality: Modality;
   systemPrompt: string;
   createdAt: string;
 }

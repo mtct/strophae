@@ -39,11 +39,12 @@ the renderer CSP in `src/renderer/index.html`).
 ## Architecture
 
 ```text
-src/shared/    types.ts (domain model) · models.ts (DEFAULT_MODELS seed,
-               modelSlug(label, models), supportsImageOutput, HUE_PALETTE,
-               default agent, title rules) · fences.ts (```mermaid block
-               parser) · time.ts (sidebar recency buckets) · i18n.ts (en/it
-               catalogs, translate())
+src/shared/    types.ts (domain model, Modality) · models.ts (DEFAULT_MODELS
+               seed, modelSlug(label, models), supportsImageOutput/
+               supportsAudioOutput, defaultModality, HUE_PALETTE, default
+               agent, title rules) · fences.ts (```mermaid block parser) ·
+               audio.ts (streamed PCM16 → WAV data URL) · time.ts (sidebar
+               recency buckets) · i18n.ts (en/it catalogs, translate())
 src/main/      main.ts (window, --check mode) · store.ts (persistence) ·
                ipc.ts (IPC surface + safeStorage API key) · attachments.ts
                (file import/extraction + payload files + GC)
@@ -53,7 +54,8 @@ src/renderer/  React app: App.tsx (state, view routing, toasts) ·
                openrouter.ts (SSE streaming) · theme.ts (oklch accents) ·
                styles.css · index.html (CSP)
 scripts/       bundle.ts (Bun.build for main/preload/renderer + static copy)
-tests/         bun test suites for src/shared + src/main/store
+tests/         bun test suites for src/shared (audio, models, fences,
+               i18n, time) + src/main (store, attachments)
 packaging/     icons + Mac App Store entitlements (electron-builder
                buildResources)
 ```
@@ -84,11 +86,21 @@ packaging/     icons + Mac App Store entitlements (electron-builder
 - **Rich assistant replies**: ```mermaid fences render as diagrams
   (`components/Mermaid.tsx` — mermaid bundled by Bun, securityLevel
   strict + htmlLabels off + DOMPurify pass; unterminated fences stay raw
-  text while streaming, parser in `src/shared/fences.ts`). Diffusion
-  models: `supportsImageOutput(slug)` adds `modalities:["image","text"]`,
-  streamed `delta.images` data URLs display live and are persisted at
-  finalize as image attachments of the assistant message
-  (`importDataUrl`), shown via `StoredImage`.
+  text while streaming, parser in `src/shared/fences.ts`).
+- **Per-persona modality** (`Agent.modality`/`Persona.modality`:
+  `'text' | 'image' | 'audio'`, chosen in the compose card's Output
+  selector): drives the OpenRouter `modalities` request field and how the
+  reply is rendered/persisted, replacing the old slug-only image guess
+  (`defaultModality(slug)` now only seeds the default at creation; legacy
+  documents are backfilled from the slug in `store.load()`). Image agents:
+  `modalities:["image","text"]`, streamed `delta.images` data URLs display
+  live and persist as image attachments (`importDataUrl` → `StoredImage`).
+  Audio agents: `modalities:["audio","text"]` + `audio:{voice,format:pcm16}`,
+  the streamed `delta.audio` transcript shows live as text while the base64
+  PCM16 chunks are assembled into one WAV (`src/shared/audio.ts`) at
+  finalize, persisted as an audio attachment and played via `StoredAudio`
+  (`media-src data:` in the CSP). `msg:finalize` takes generic `media`
+  data URLs (image or audio); `importDataUrl` picks the kind from the mime.
 - **i18n**: en source + it catalog in `src/shared/i18n.ts` (tests enforce
   key parity). Language preference `'' | en | it` ('' = follow OS,
   `app.getLocale()`); switching from Settings re-renders live. Only product

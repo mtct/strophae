@@ -66,6 +66,10 @@ export function App() {
     // Shared prompt + at least the default agent card carry attach buttons.
     report['attach controls'] =
       document.querySelectorAll('.compose-page .attach-btn').length >= 2;
+    // Every persona card lets the user pick its output modality.
+    report['modality selector'] =
+      document.querySelectorAll('.compose-page .modality-row select').length
+        >= 1;
     // Open the persona menu so the screenshot covers its (drop-up) placement.
     const libraryBtn = document.querySelector<HTMLButtonElement>(
       '.compose-bottom .menu-anchor button');

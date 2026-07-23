@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 
+import { pcm16ToWav } from '../../shared/audio';
 import { splitFences } from '../../shared/fences';
-import { modelSlug, supportsImageOutput } from '../../shared/models';
+import { modelSlug } from '../../shared/models';
 import type {
   Agent, Attachment, Conversation, Message, ModelEntry,
 } from '../../shared/types';
@@ -12,7 +13,9 @@ import {
 } from '../attachments';
 import { streamAgent, type ChatMessage, type ContentPart } from '../openrouter';
 import { accent, headerBg, soft } from '../theme';
-import { AttachButton, AttachmentChips, StoredImage } from './Attachments';
+import {
+  AttachButton, AttachmentChips, StoredAudio, StoredImage,
+} from './Attachments';
 import { MermaidBlock } from './Mermaid';
 
 /** Live streaming text per assistant slot id (not yet persisted). */
@@ -37,6 +40,7 @@ function AgentColumn(props: {
   agent: Agent;
   live: LiveText;
   liveImages: LiveImages;
+  liveAudio: Set<number>;
   streamingIds: Set<number>;
   hidden: boolean;
   expanded: boolean;
@@ -54,11 +58,14 @@ function AgentColumn(props: {
 
   const textOf = (m: Message): string =>
     m.id in props.live ? props.live[m.id]! : m.text;
-  const imagesOf = (m: Message): number =>
-    (m.attachments?.length ?? 0) + (props.liveImages[m.id]?.length ?? 0);
+  // Non-text output attached to a message: stored image/audio replies plus
+  // whatever is still streaming into this slot.
+  const mediaOf = (m: Message): number =>
+    (m.attachments?.length ?? 0) + (props.liveImages[m.id]?.length ?? 0)
+    + (props.liveAudio.has(m.id) ? 1 : 0);
 
   const visible = agent.messages.filter(
-    (m) => m.role === 'user' || textOf(m) !== '' || imagesOf(m) > 0
+    (m) => m.role === 'user' || textOf(m) !== '' || mediaOf(m) > 0
       || props.streamingIds.has(m.id));
 
   return (
@@ -106,16 +113,22 @@ function AgentColumn(props: {
           ) : (
             <div key={m.id}
                  className={`msg-assistant${
-                   textOf(m) === '' && imagesOf(m) === 0 ? ' pending' : ''}`}>
+                   textOf(m) === '' && mediaOf(m) === 0 ? ' pending' : ''}`}>
               {textOf(m) !== '' && <AssistantBody text={textOf(m)} />}
               {(m.attachments ?? [])
                 .filter((a) => a.kind === 'image')
                 .map((a) => <StoredImage key={a.id} att={a} />)}
+              {(m.attachments ?? [])
+                .filter((a) => a.kind === 'audio')
+                .map((a) => <StoredAudio key={a.id} att={a} />)}
               {(props.liveImages[m.id] ?? []).map((url, i) => (
                 <img key={i} className="gen-img" src={url}
                      alt={`image ${i + 1}`} />
               ))}
-              {textOf(m) === '' && imagesOf(m) === 0 && '…'}
+              {props.liveAudio.has(m.id) && (
+                <div className="gen-audio-pending">🔊 {t('generating_audio')}</div>
+              )}
+              {textOf(m) === '' && mediaOf(m) === 0 && '…'}
             </div>
           ))}
       </div>
@@ -191,6 +204,7 @@ export function ChatPage(props: {
   const [sending, setSending] = useState(false);
   const [live, setLive] = useState<LiveText>({});
   const [liveImages, setLiveImages] = useState<LiveImages>({});
+  const [liveAudio, setLiveAudio] = useState<Set<number>>(new Set());
   const [streamingIds, setStreamingIds] = useState<Set<number>>(new Set());
   const [expandedId, setExpandedId] = useState<number | null>(null);
 
@@ -243,6 +257,7 @@ export function ChatPage(props: {
       const slotId = result.slotIds[agent.id]!;
       const slug = modelSlug(agent.model, props.models);
       const images: string[] = [];
+      const audioChunks: string[] = [];
       let acc = '';
       (async () => {
         const payload = await buildPayload(
@@ -251,23 +266,39 @@ export function ChatPage(props: {
           acc += token;
           setLive((prev) => ({ ...prev, [slotId]: acc }));
         }, {
-          imageOutput: supportsImageOutput(slug),
+          modality: agent.modality,
           onImage: (url) => {
             images.push(url);
             setLiveImages((prev) => ({
               ...prev, [slotId]: [...(prev[slotId] ?? []), url],
             }));
           },
+          onAudio: (chunk) => {
+            audioChunks.push(chunk);
+            setLiveAudio((prev) =>
+              prev.has(slotId) ? prev : new Set(prev).add(slotId));
+          },
         });
       })()
         .catch((err: Error) => {
-          // A partial reply or generated images beat an error banner.
-          if (!acc && images.length === 0) acc = `⚠ ${err.message}`;
+          // A partial reply or generated media beats an error banner.
+          if (!acc && images.length === 0 && audioChunks.length === 0) {
+            acc = `⚠ ${err.message}`;
+          }
           setLive((prev) => ({ ...prev, [slotId]: acc }));
         })
         .finally(async () => {
-          await api.finalizeMessage(slotId, acc, images);
+          // Streamed PCM16 becomes one playable WAV persisted with the reply.
+          const wav = pcm16ToWav(audioChunks);
+          const media = wav ? [...images, wav] : images;
+          await api.finalizeMessage(slotId, acc, media);
           setStreamingIds((prev) => {
+            const next = new Set(prev);
+            next.delete(slotId);
+            return next;
+          });
+          setLiveAudio((prev) => {
+            if (!prev.has(slotId)) return prev;
             const next = new Set(prev);
             next.delete(slotId);
             return next;
@@ -314,6 +345,7 @@ export function ChatPage(props: {
             agent={agent}
             live={live}
             liveImages={liveImages}
+            liveAudio={liveAudio}
             streamingIds={streamingIds}
             hidden={expanded !== null && expanded !== agent.id}
             expanded={expanded === agent.id}

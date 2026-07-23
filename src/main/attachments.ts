@@ -79,28 +79,38 @@ export async function importAttachment(
   return att;
 }
 
-const DATA_URL_EXT: Record<string, string> = {
-  'image/png': 'png',
-  'image/jpeg': 'jpg',
-  'image/webp': 'webp',
-  'image/gif': 'gif',
+// Mimes a model may stream back as generated media, mapped to
+// {extension, attachment kind}. Image models return image/*; audio models
+// return the WAV the renderer assembles from PCM16 chunks (or a container
+// the provider produced directly).
+const DATA_URL_MEDIA: Record<string, { ext: string; kind: AttachmentKind }> = {
+  'image/png': { ext: 'png', kind: 'image' },
+  'image/jpeg': { ext: 'jpg', kind: 'image' },
+  'image/webp': { ext: 'webp', kind: 'image' },
+  'image/gif': { ext: 'gif', kind: 'image' },
+  'audio/wav': { ext: 'wav', kind: 'audio' },
+  'audio/x-wav': { ext: 'wav', kind: 'audio' },
+  'audio/mpeg': { ext: 'mp3', kind: 'audio' },
+  'audio/mp3': { ext: 'mp3', kind: 'audio' },
+  'audio/ogg': { ext: 'ogg', kind: 'audio' },
+  'audio/webm': { ext: 'webm', kind: 'audio' },
 };
 
-/** Persist a model-generated image (a data: URL streamed from
-    OpenRouter) as a regular image attachment. */
+/** Persist model-generated media (a data: URL streamed from OpenRouter) as
+    an image or audio attachment, keyed off the mime type. */
 export function importDataUrl(
   dir: string, id: number, dataUrl: string,
 ): Attachment {
   const match = /^data:([\w/+.-]+);base64,(.*)$/s.exec(dataUrl);
-  const ext = match && DATA_URL_EXT[match[1]!];
-  if (!ext) throw new Error('unsupported data url');
+  const media = match && DATA_URL_MEDIA[match[1]!];
+  if (!media) throw new Error('unsupported data url');
   const bytes = Buffer.from(match![2]!, 'base64');
   if (bytes.length > MAX_ATTACHMENT_BYTES) throw new Error('too large');
   const att: Attachment = {
     id,
-    name: `image-${id}.${ext}`,
+    name: `${media.kind}-${id}.${media.ext}`,
     mime: match![1]!,
-    kind: 'image',
+    kind: media.kind,
     size: bytes.length,
   };
   mkdirSync(attachmentsDir(dir), { recursive: true });

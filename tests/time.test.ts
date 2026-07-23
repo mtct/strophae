@@ -18,6 +18,7 @@ function conv(id: number, updatedAt: string, withMessage = true): Conversation {
       hue: 255,
       model: 'GPT-4o',
       personaType: 'generic',
+      modality: 'text',
       systemPrompt: '',
       order: 0,
       messages: withMessage

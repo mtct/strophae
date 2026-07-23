@@ -9,7 +9,8 @@ import { join } from 'node:path';
 import { deleteAttachmentFiles, sweepAttachments } from './attachments';
 import { translate, type Lang } from '../shared/i18n';
 import {
-  DEFAULT_AGENT, DEFAULT_MODELS, nextHue, titleFrom,
+  DEFAULT_AGENT, DEFAULT_MODELS, defaultModality, modelSlug, nextHue,
+  titleFrom,
 } from '../shared/models';
 import type {
   Agent,
@@ -17,6 +18,7 @@ import type {
   Conversation,
   Language,
   Message,
+  Modality,
   ModelEntry,
   Persona,
   SendResult,
@@ -60,6 +62,14 @@ export class Store {
     if (!data.settings.models?.length) {
       data.settings.models = structuredClone(DEFAULT_MODELS);
     }
+    // Documents predating per-persona modality: infer it from the model
+    // slug (same heuristic the old image-only path used), then freeze it.
+    const models = data.settings.models;
+    const backfill = (m: { model: string; modality?: Modality }) => {
+      if (!m.modality) m.modality = defaultModality(modelSlug(m.model, models));
+    };
+    for (const conv of data.conversations) conv.agents.forEach(backfill);
+    data.personas.forEach(backfill);
     return data;
   }
 
@@ -143,6 +153,7 @@ export class Store {
       hue: DEFAULT_AGENT.hue,
       model: this.defaultModel(),
       personaType: DEFAULT_AGENT.personaType,
+      modality: DEFAULT_AGENT.modality,
     }));
     this.data.conversations.push(conv);
     this.save();
@@ -173,7 +184,7 @@ export class Store {
 
   private buildAgent(conv: Conversation, fields: {
     name: string; hue: number; model: string; personaType: string;
-    systemPrompt: string;
+    modality: Modality; systemPrompt: string;
   }): Agent {
     return {
       id: this.id(),
@@ -185,11 +196,13 @@ export class Store {
 
   addAgent(convId: number): Agent {
     const conv = this.conversation(convId);
+    const model = this.defaultModel();
     const agent = this.buildAgent(conv, {
       name: translate(this.lang(), 'agent_n', { n: conv.agents.length + 1 }),
       hue: nextHue(conv.agents.map((a) => a.hue)),
-      model: this.defaultModel(),
+      model,
       personaType: 'generic',
+      modality: defaultModality(modelSlug(model, this.data.settings.models)),
       systemPrompt: '',
     });
     conv.agents.push(agent);
@@ -206,6 +219,7 @@ export class Store {
       hue: persona.hue,
       model: persona.model,
       personaType: persona.personaType,
+      modality: persona.modality,
       systemPrompt: persona.systemPrompt,
     });
     conv.agents.push(agent);
@@ -214,7 +228,8 @@ export class Store {
   }
 
   updateAgent(agentId: number, fields: Partial<
-      Pick<Agent, 'name' | 'hue' | 'model' | 'systemPrompt'>>): Agent {
+      Pick<Agent, 'name' | 'hue' | 'model' | 'modality' | 'systemPrompt'>>)
+      : Agent {
     const { agent } = this.agent(agentId);
     Object.assign(agent, fields);
     this.save();
@@ -245,6 +260,7 @@ export class Store {
       hue: agent.hue,
       model: agent.model,
       personaType: agent.personaType,
+      modality: agent.modality,
       systemPrompt: agent.systemPrompt,
       createdAt: this.now(),
     };

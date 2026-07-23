@@ -151,6 +151,14 @@ textarea { resize: none; }
 .agent-card .row { display: flex; gap: 6px; align-items: center; }
 .agent-card input[type='text'] { flex: 1; min-width: 0; }
 .agent-card textarea { height: 120px; }
+.modality-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.modality-row select { flex: 1; min-width: 0; }
 .card-actions { display: flex; justify-content: space-between; }
 .compose-bottom { display: flex; gap: 8px; align-items: center; }
 
@@ -256,6 +264,16 @@ textarea { resize: none; }
   max-width: 100%;
   border-radius: 10px;
   border: 1px solid var(--border);
+  margin: 6px 0;
+}
+.gen-audio {
+  display: block;
+  width: 100%;
+  margin: 6px 0;
+}
+.gen-audio-pending {
+  font-size: 13px;
+  color: var(--muted);
   margin: 6px 0;
 }
 .input-row { display: flex; gap: 8px; }

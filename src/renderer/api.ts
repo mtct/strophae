@@ -25,14 +25,15 @@ export interface StrophaeApi {
   addAgent(convId: number): Promise<Agent>;
   addAgentFromPersona(convId: number, personaId: number): Promise<Agent>;
   updateAgent(agentId: number, fields: Partial<
-    Pick<Agent, 'name' | 'hue' | 'model' | 'systemPrompt'>>): Promise<Agent>;
+    Pick<Agent, 'name' | 'hue' | 'model' | 'modality' | 'systemPrompt'>>)
+    : Promise<Agent>;
   removeAgent(agentId: number): Promise<void>;
   clearThread(agentId: number): Promise<void>;
   savePersona(agentId: number): Promise<Persona>;
   sendMessage(convId: number, text: string,
               attachments?: Attachment[]): Promise<SendResult>;
   finalizeMessage(messageId: number, text: string,
-                  images?: string[]): Promise<void>;
+                  media?: string[]): Promise<void>;
   pickAttachments(): Promise<PickResult>;
   /** Plain text for kind 'text', a data: URL for image/pdf. */
   attachmentData(att: Attachment): Promise<string>;

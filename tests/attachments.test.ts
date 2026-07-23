@@ -83,7 +83,16 @@ describe('importDataUrl (model-generated images)', () => {
     expect(readAttachment(dir, att)).toBe(url);
   });
 
-  test('rejects non-image payloads', () => {
+  test('round-trips a generated wav as an audio attachment', () => {
+    const bytes = Buffer.from([0x52, 0x49, 0x46, 0x46]); // "RIFF"
+    const url = `data:audio/wav;base64,${bytes.toString('base64')}`;
+    const att = importDataUrl(dir, 10, url);
+    expect(att).toMatchObject(
+      { kind: 'audio', mime: 'audio/wav', name: 'audio-10.wav', size: 4 });
+    expect(readAttachment(dir, att)).toBe(url);
+  });
+
+  test('rejects non-media payloads', () => {
     expect(() => importDataUrl(dir, 8, 'data:text/html;base64,PGI+'))
       .toThrow('unsupported');
     expect(() => importDataUrl(dir, 9, 'https://example.com/x.png'))

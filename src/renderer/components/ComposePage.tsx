@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import { HUE_PALETTE } from '../../shared/models';
 import type {
-  Agent, Conversation, ModelEntry, Persona,
+  Agent, Conversation, Modality, ModelEntry, Persona,
 } from '../../shared/types';
 import { api } from '../api';
 import type { T } from '../App';
@@ -80,6 +80,21 @@ function AgentCard(props: {
           )}
           {props.models.map((m) => <option key={m.label}>{m.label}</option>)}
         </select>
+        <label className="modality-row">
+          <span>{t('modality_label')}</span>
+          <select
+            value={agent.modality}
+            onChange={async (e) => {
+              await api.updateAgent(
+                agent.id, { modality: e.target.value as Modality });
+              props.onChanged();
+            }}
+          >
+            <option value="text">{t('modality_text')}</option>
+            <option value="image">{t('modality_image')}</option>
+            <option value="audio">{t('modality_audio')}</option>
+          </select>
+        </label>
         <textarea
           value={prompt}
           placeholder={t('system_prompt_placeholder')}

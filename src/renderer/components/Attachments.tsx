@@ -10,6 +10,7 @@ import type { T } from '../App';
 
 function icon(att: Attachment): string {
   if (att.kind === 'image') return '🖼';
+  if (att.kind === 'audio') return '🔊';
   return '📄';
 }
 
@@ -57,6 +58,29 @@ export function StoredImage(props: { att: Attachment }) {
 
   if (!url) return null;
   return <img className="gen-img" src={url} alt={props.att.name} />;
+}
+
+/** A model-generated audio reply shown inline as a playable clip. */
+export function StoredAudio(props: { att: Attachment }) {
+  const [url, setUrl] = useState('');
+
+  useEffect(() => {
+    let alive = true;
+    setUrl('');
+    api.attachmentData(props.att)
+      .then((data) => alive && setUrl(data))
+      .catch(() => { /* file swept — leave blank */ });
+    return () => {
+      alive = false;
+    };
+  }, [props.att.id]);
+
+  if (!url) return null;
+  return (
+    <audio className="gen-audio" controls src={url}>
+      {props.att.name}
+    </audio>
+  );
 }
 
 export function AttachButton(props: {

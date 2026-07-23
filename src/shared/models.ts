@@ -3,7 +3,7 @@
 // modal); these are only the seed defaults, ported from the retired
 // Django settings.
 
-import type { ModelEntry } from './types';
+import type { Modality, ModelEntry } from './types';
 
 export const DEFAULT_MODELS: ModelEntry[] = [
   { label: 'GPT-4o', slug: 'openai/gpt-4o' },
@@ -16,6 +16,10 @@ export const DEFAULT_MODELS: ModelEntry[] = [
   { label: 'DeepSeek 4 Flash', slug: 'deepseek/deepseek-v4-flash' },
   { label: 'DeepSeek V3', slug: 'deepseek/deepseek-chat' },
   { label: 'Mistral Large', slug: 'mistralai/mistral-large' },
+  // Image- and audio-output models, so a fresh install can pick a persona
+  // for each modality without editing the list first.
+  { label: 'Gemini 2.5 Flash Image', slug: 'google/gemini-2.5-flash-image' },
+  { label: 'GPT-4o Audio', slug: 'openai/gpt-4o-audio-preview' },
 ];
 
 /** Configured list first, then the seed defaults (so agents keep working
@@ -35,6 +39,20 @@ export function supportsImageOutput(slug: string): boolean {
     .test(slug.toLowerCase());
 }
 
+/** Heuristic for speech/audio-output models (parallel to the image one). */
+export function supportsAudioOutput(slug: string): boolean {
+  return /audio|speech|tts|voice|realtime/.test(slug.toLowerCase());
+}
+
+/** The modality a model most likely produces, used only to seed the
+    default when creating an agent — the user then sets it explicitly on
+    the persona. */
+export function defaultModality(slug: string): Modality {
+  if (supportsImageOutput(slug)) return 'image';
+  if (supportsAudioOutput(slug)) return 'audio';
+  return 'text';
+}
+
 // Accent hue palette reused across agents and personas (chat/models.py).
 export const HUE_PALETTE = [255, 150, 310, 60, 200, 30, 340, 100, 285, 20];
 
@@ -52,6 +70,7 @@ export const DEFAULT_AGENT = {
   hue: 255,
   model: 'DeepSeek 4 Flash',
   personaType: 'generic',
+  modality: 'text',
 } as const;
 
 export const TITLE_LIMIT = 46;

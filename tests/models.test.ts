@@ -1,7 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 
 import {
-  DEFAULT_MODELS, modelSlug, supportsImageOutput,
+  DEFAULT_MODELS, defaultModality, modelSlug, supportsAudioOutput,
+  supportsImageOutput,
 } from '../src/shared/models';
 
 describe('modelSlug', () => {
@@ -29,6 +30,19 @@ describe('modelSlug', () => {
     expect(supportsImageOutput('black-forest-labs/flux-1.1-pro')).toBe(true);
     expect(supportsImageOutput('openai/gpt-4o')).toBe(false);
     expect(supportsImageOutput('anthropic/claude-sonnet-4')).toBe(false);
+  });
+
+  test('audio-output heuristic spots speech models only', () => {
+    expect(supportsAudioOutput('openai/gpt-4o-audio-preview')).toBe(true);
+    expect(supportsAudioOutput('some/model-tts')).toBe(true);
+    expect(supportsAudioOutput('openai/gpt-4o')).toBe(false);
+    expect(supportsAudioOutput('google/gemini-2.5-flash-image')).toBe(false);
+  });
+
+  test('defaultModality maps a slug to its most likely output', () => {
+    expect(defaultModality('google/gemini-2.5-flash-image')).toBe('image');
+    expect(defaultModality('openai/gpt-4o-audio-preview')).toBe('audio');
+    expect(defaultModality('anthropic/claude-sonnet-4')).toBe('text');
   });
 
   test('seed defaults all carry provider/model slugs', () => {

@@ -96,6 +96,46 @@ describe('agents & personas', () => {
     expect(agent.name).toBe('Muse');
     expect(agent.hue).toBe(310);
   });
+
+  test('new agents default to the text modality', () => {
+    const conv = store.createSession();
+    expect(conv.agents[0]!.modality).toBe('text');
+    expect(store.addAgent(conv.id).modality).toBe('text');
+  });
+
+  test('modality is user-editable and carried onto a saved persona', () => {
+    const conv = store.createSession();
+    const agent = store.updateAgent(
+      conv.agents[0]!.id, { modality: 'audio' });
+    expect(agent.modality).toBe('audio');
+    const persona = store.savePersona(agent.id);
+    expect(persona.modality).toBe('audio');
+    expect(store.addAgentFromPersona(conv.id, persona.id).modality)
+      .toBe('audio');
+  });
+
+  test('legacy documents backfill modality from the model slug', () => {
+    const legacy = mkdtempSync(join(tmpdir(), 'strophae-'));
+    writeFileSync(join(legacy, 'strophae.json'), JSON.stringify({
+      nextId: 50,
+      conversations: [{
+        id: 1, title: 't', sharedSystemPrompt: '', createdAt: '', updatedAt: '',
+        agents: [{
+          id: 2, name: 'Pix', hue: 255, model: 'Gemini 2.5 Flash Image',
+          personaType: 'generic', systemPrompt: '', order: 0, messages: [],
+        }],
+      }],
+      personas: [{
+        id: 3, name: 'Voice', hue: 60, model: 'openai/gpt-4o-audio-preview',
+        personaType: 'generic', systemPrompt: '', createdAt: '',
+      }],
+      settings: { language: '', models: [] },
+    }));
+    const migrated = new Store(legacy, 'en');
+    expect(migrated.conversation(1).agents[0]!.modality).toBe('image');
+    expect(migrated.personas()[0]!.modality).toBe('audio');
+    rmSync(legacy, { recursive: true, force: true });
+  });
 });
 
 describe('attachments', () => {
