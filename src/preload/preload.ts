@@ -30,6 +30,7 @@ const api = {
   setModels: invoke('settings:setModels'),
   getApiKey: invoke('apikey:get'),
   setApiKey: invoke('apikey:set'),
+  openExternal: invoke('shell:openExternal'),
   checkShot: invoke('check:shot'),
   checkReady: invoke('check:ready'),
 };

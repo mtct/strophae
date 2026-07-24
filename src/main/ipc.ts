@@ -5,7 +5,7 @@
 import { readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 
-import { BrowserWindow, dialog, ipcMain, safeStorage } from 'electron';
+import { BrowserWindow, dialog, ipcMain, safeStorage, shell } from 'electron';
 
 import { translate } from '../shared/i18n';
 import type {
@@ -134,4 +134,18 @@ export function registerIpc(store: Store, dir: string,
     store.setModels(models));
   ipcMain.handle('apikey:get', () => loadApiKey(dir));
   ipcMain.handle('apikey:set', (_e, value: string) => saveApiKey(dir, value));
+
+  // Links in rendered markdown replies open in the user's browser, never in
+  // the app window (which stays pinned to the bundled index.html). Only web
+  // and mail schemes are ever handed to the OS — the LLM output is untrusted,
+  // so file:, javascript: and the like are refused here as a backstop.
+  ipcMain.handle('shell:openExternal', (_e, url: string) => {
+    let scheme = '';
+    try {
+      scheme = new URL(url).protocol;
+    } catch { /* not a URL */ }
+    if (scheme === 'http:' || scheme === 'https:' || scheme === 'mailto:') {
+      return shell.openExternal(url);
+    }
+  });
 }

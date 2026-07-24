@@ -116,7 +116,7 @@ describe('agents & personas', () => {
 
   test('a fresh store seeds the six thinking hats in hat order', () => {
     const names = store.personas().map((p) => p.name);
-    expect(names).toEqual([
+    expect(names.slice(0, 6)).toEqual([
       'White Hat — Facts',
       'Red Hat — Feelings',
       'Black Hat — Caution',
@@ -128,8 +128,26 @@ describe('agents & personas', () => {
     expect(white.personaType).toBe('white_hat');
     expect(white.modality).toBe('text');
     expect(white.systemPrompt).toContain('facts');
-    // Distinct accents, so the hats are told apart in the library.
-    expect(new Set(store.personas().map((p) => p.hue)).size).toBe(6);
+    // Distinct accents, so the personas are told apart in the library.
+    expect(new Set(store.personas().map((p) => p.hue)).size).toBe(8);
+  });
+
+  test('a fresh store seeds Raffaello (image) and Iggy (audio)', () => {
+    const raffaello =
+      store.personas().find((p) => p.personaType === 'raffaello')!;
+    expect(raffaello.name).toBe('Raffaello');
+    expect(raffaello.modality).toBe('image');
+    expect(raffaello.model).toBe('Gemini 2.5 Flash Image');
+    const iggy = store.personas().find((p) => p.personaType === 'iggy')!;
+    expect(iggy.name).toBe('Iggy');
+    expect(iggy.modality).toBe('audio');
+    expect(iggy.model).toBe('GPT-4o Audio');
+    // Added to a session, a media persona carries its modality and model
+    // onto the agent, so it renders images/audio without further setup.
+    const conv = store.createSession();
+    const agent = store.addAgentFromPersona(conv.id, raffaello.id);
+    expect(agent.modality).toBe('image');
+    expect(agent.model).toBe('Gemini 2.5 Flash Image');
   });
 
   test('the seeded hats are materialised in the store language', () => {
@@ -147,13 +165,14 @@ describe('agents & personas', () => {
   });
 
   test('deleting a persona removes it and never re-seeds it', () => {
+    const before = store.personas().length;
     const doomed = store.personas()[0]!;
     store.deletePersona(doomed.id);
-    expect(store.personas()).toHaveLength(5);
+    expect(store.personas()).toHaveLength(before - 1);
     expect(store.personas().some((p) => p.id === doomed.id)).toBe(false);
     store.flush();
     // A later run must not resurrect the deleted library entry.
-    expect(new Store(dir, 'en').personas()).toHaveLength(5);
+    expect(new Store(dir, 'en').personas()).toHaveLength(before - 1);
   });
 
   test('deleting a persona leaves agents built from it untouched', () => {
@@ -188,6 +207,43 @@ describe('agents & personas', () => {
     expect(migrated.conversation(1).agents[0]!.modality).toBe('image');
     expect(migrated.personas().find((p) => p.id === 3)!.modality).toBe('audio');
     rmSync(legacy, { recursive: true, force: true });
+  });
+
+  test('documents seeded before the media personas gain them once', () => {
+    const older = mkdtempSync(join(tmpdir(), 'strophae-'));
+    // A document from before Raffaello/Iggy existed: hats already seeded,
+    // no mediaPersonasSeeded flag.
+    writeFileSync(join(older, 'strophae.json'), JSON.stringify({
+      nextId: 20,
+      conversations: [],
+      personas: [{
+        id: 1, name: 'White Hat — Facts', hue: 200, model: 'DeepSeek 4 Flash',
+        personaType: 'white_hat', modality: 'text', systemPrompt: 'facts',
+        createdAt: '',
+      }],
+      settings: { language: 'en', models: [] },
+      personasSeeded: true,
+    }));
+    const store2 = new Store(older, 'en');
+    const raffaello =
+      store2.personas().find((p) => p.personaType === 'raffaello');
+    const iggy = store2.personas().find((p) => p.personaType === 'iggy');
+    expect(raffaello!.modality).toBe('image');
+    expect(iggy!.modality).toBe('audio');
+    // The hats are not re-seeded — the existing one is left as is.
+    expect(store2.personas().filter((p) => p.personaType.endsWith('_hat')))
+      .toHaveLength(1);
+    store2.flush();
+    // Deleting a media persona must not resurrect it on the next run, and
+    // the group must not be seeded twice.
+    store2.deletePersona(iggy!.id);
+    store2.flush();
+    const reopened = new Store(older, 'en');
+    expect(reopened.personas().some((p) => p.personaType === 'iggy'))
+      .toBe(false);
+    expect(reopened.personas().filter((p) => p.personaType === 'raffaello'))
+      .toHaveLength(1);
+    rmSync(older, { recursive: true, force: true });
   });
 });
 

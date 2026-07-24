@@ -12,7 +12,7 @@ import {
   DEFAULT_AGENT, DEFAULT_MODELS, defaultModality, modelSlug, nextHue,
   titleFrom,
 } from '../shared/models';
-import { SIX_HATS } from '../shared/personas';
+import { MEDIA_PERSONAS, SIX_HATS, type SeedPersona } from '../shared/personas';
 import type {
   Agent,
   Attachment,
@@ -34,6 +34,11 @@ interface Data {
   /** Set once the Six Thinking Hats library has been materialised, so
       deleting those personas does not bring them back on the next run. */
   personasSeeded?: boolean;
+  /** Set once the media personas (Raffaello, Iggy) have been materialised.
+      They shipped after the hats, so documents seeded earlier get them once
+      via this separate flag — while still never resurrecting them after a
+      delete. */
+  mediaPersonasSeeded?: boolean;
 }
 
 const EMPTY: Data = {
@@ -56,30 +61,41 @@ export class Store {
     sweepAttachments(dir, this.referencedAttachmentIds());
   }
 
-  /** Materialise the Six Thinking Hats library once, in the language in
-      force at that moment; from then on they are ordinary user personas,
-      editable and deletable like any other. */
+  /** Materialise the seed persona library, in the language in force at that
+      moment; from then on they are ordinary user personas, editable and
+      deletable like any other. Each group has its own one-shot flag, so the
+      media personas reach documents that were seeded before they existed
+      without ever resurrecting a group the user has since deleted. */
   private seedPersonas(): void {
-    if (this.data.personasSeeded) return;
     const lang = this.lang();
-    const model = this.defaultModel();
-    // One timestamp for all six keeps them in hat order behind the
-    // newest-first sort (equal keys, stable sort).
+    const textModel = this.defaultModel();
+    // One timestamp per run keeps the newly added personas in library order
+    // behind the newest-first sort (equal keys, stable sort).
     const createdAt = this.now();
-    for (const hat of SIX_HATS) {
+    const add = (seed: SeedPersona) => {
       this.data.personas.push({
         id: this.id(),
-        name: translate(lang, hat.nameKey),
-        hue: hat.hue,
-        model,
-        personaType: hat.personaType,
-        modality: 'text',
-        systemPrompt: translate(lang, hat.promptKey),
+        name: translate(lang, seed.nameKey),
+        hue: seed.hue,
+        model: seed.modelLabel ?? textModel,
+        personaType: seed.personaType,
+        modality: seed.modality ?? 'text',
+        systemPrompt: translate(lang, seed.promptKey),
         createdAt,
       });
+    };
+    let changed = false;
+    if (!this.data.personasSeeded) {
+      SIX_HATS.forEach(add);
+      this.data.personasSeeded = true;
+      changed = true;
     }
-    this.data.personasSeeded = true;
-    this.save();
+    if (!this.data.mediaPersonasSeeded) {
+      MEDIA_PERSONAS.forEach(add);
+      this.data.mediaPersonasSeeded = true;
+      changed = true;
+    }
+    if (changed) this.save();
   }
 
   private load(): Data {

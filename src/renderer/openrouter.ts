@@ -20,6 +20,45 @@ export interface ChatMessage {
 /** Voice for audio-output models; a neutral default is fine for all. */
 export const DEFAULT_VOICE = 'alloy';
 
+const joinText = (lead: string, body: string): string =>
+  body ? `${lead}\n\n${body}` : lead;
+
+/** Image-output models ignore the system role and condition only on the
+    user turn, so a persona's system prompt would never reach the picture —
+    editing it changes nothing. Fold every system message into the most
+    recent user turn (adding one if the request has none) and drop the
+    system messages. Returns a new array; the input is left untouched. */
+export function foldSystemIntoUser(messages: ChatMessage[]): ChatMessage[] {
+  const systemText = messages
+    .filter((m) => m.role === 'system' && typeof m.content === 'string')
+    .map((m) => m.content as string)
+    .join('\n\n')
+    .trim();
+  const rest = messages.filter((m) => m.role !== 'system');
+  if (!systemText) return rest;
+
+  for (let i = rest.length - 1; i >= 0; i--) {
+    const m = rest[i]!;
+    if (m.role !== 'user') continue;
+    if (typeof m.content === 'string') {
+      rest[i] = { role: 'user', content: joinText(systemText, m.content) };
+    } else {
+      const parts = m.content.slice();
+      const t = parts.findIndex((p) => p.type === 'text');
+      if (t >= 0) {
+        const part = parts[t] as { type: 'text'; text: string };
+        parts[t] = { type: 'text', text: joinText(systemText, part.text) };
+      } else {
+        parts.unshift({ type: 'text', text: systemText });
+      }
+      rest[i] = { role: 'user', content: parts };
+    }
+    return rest;
+  }
+  // No user turn at all: carry the instruction in a fresh one.
+  return [...rest, { role: 'user', content: systemText }];
+}
+
 export interface StreamOptions {
   /** What the agent should produce (default 'text'). Drives the request's
       `modalities`: 'image' asks for pictures, 'audio' asks for speech. */

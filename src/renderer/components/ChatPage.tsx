@@ -11,11 +11,15 @@ import type { T } from '../App';
 import {
   inlineText, mediaParts, type AttachmentCache,
 } from '../attachments';
-import { streamAgent, type ChatMessage, type ContentPart } from '../openrouter';
+import {
+  foldSystemIntoUser, streamAgent,
+  type ChatMessage, type ContentPart,
+} from '../openrouter';
 import { accent, headerBg, soft } from '../theme';
 import {
   AttachButton, AttachmentChips, StoredAudio, StoredImage,
 } from './Attachments';
+import { Markdown } from './Markdown';
 import { MermaidBlock } from './Mermaid';
 
 /** Live streaming text per assistant slot id (not yet persisted). */
@@ -23,14 +27,15 @@ type LiveText = Record<number, string>;
 /** Generated images per slot id, as data: URLs, while streaming. */
 type LiveImages = Record<number, string[]>;
 
-/** Assistant text with ```mermaid blocks drawn as diagrams. */
+/** Assistant text rendered as markdown, with ```mermaid blocks split out
+    and drawn as diagrams. */
 function AssistantBody(props: { text: string }) {
   return (
     <>
       {splitFences(props.text).map((seg, i) =>
         seg.type === 'mermaid'
           ? <MermaidBlock key={i} code={seg.content} />
-          : <span key={i}>{seg.content}</span>)}
+          : <Markdown key={i} text={seg.content} />)}
     </>
   );
 }
@@ -186,7 +191,10 @@ async function buildPayload(
     ];
     payload.push({ role: 'user', content: parts });
   }
-  return payload;
+  // Image models ignore the system role, so the persona/shared prompt is
+  // folded into the user turn — otherwise editing it never changes the
+  // picture. Text and audio models honour the system message as sent.
+  return agent.modality === 'image' ? foldSystemIntoUser(payload) : payload;
 }
 
 export function ChatPage(props: {
@@ -252,17 +260,39 @@ export function ChatPage(props: {
     setStreamingIds(new Set(Object.values(result.slotIds)));
 
     const cache: AttachmentCache = new Map();
-    let pending = result.conversation.agents.length;
-    for (const agent of result.conversation.agents) {
-      const slotId = result.slotIds[agent.id]!;
+
+    // Build every agent's request up front, in parallel, so the fetches can
+    // all be dispatched in the same tick below — otherwise an agent whose
+    // payload needs heavier attachment reads would fire (and start streaming)
+    // noticeably later than the rest. A build failure becomes that agent's
+    // own error banner, leaving the other columns untouched.
+    const jobs = await Promise.all(
+      result.conversation.agents.map(async (agent) => {
+        const slotId = result.slotIds[agent.id]!;
+        try {
+          const payload = await buildPayload(
+            result.conversation, agent, slotId, cache);
+          return { agent, slotId, payload, buildError: null as Error | null };
+        } catch (buildError) {
+          return {
+            agent, slotId, payload: [] as ChatMessage[],
+            buildError: buildError as Error,
+          };
+        }
+      }));
+
+    let pending = jobs.length;
+    // Dispatch is synchronous: streamAgent() runs its fetch() before the
+    // first await, so every request leaves the renderer in one tick and the
+    // columns start together (only the models' own latency staggers them).
+    for (const { agent, slotId, payload, buildError } of jobs) {
       const slug = modelSlug(agent.model, props.models);
       const images: string[] = [];
       const audioChunks: string[] = [];
       let acc = '';
-      (async () => {
-        const payload = await buildPayload(
-          result.conversation, agent, slotId, cache);
-        await streamAgent(slug, payload, key, (token) => {
+      const stream = buildError
+        ? Promise.reject(buildError)
+        : streamAgent(slug, payload, key, (token) => {
           acc += token;
           setLive((prev) => ({ ...prev, [slotId]: acc }));
         }, {
@@ -279,7 +309,7 @@ export function ChatPage(props: {
               prev.has(slotId) ? prev : new Set(prev).add(slotId));
           },
         });
-      })()
+      stream
         .catch((err: Error) => {
           // A partial reply or generated media beats an error banner.
           if (!acc && images.length === 0 && audioChunks.length === 0) {

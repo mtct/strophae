@@ -48,6 +48,8 @@ export interface StrophaeApi {
   setModels(models: ModelEntry[]): Promise<Settings>;
   getApiKey(): Promise<string>;
   setApiKey(value: string): Promise<void>;
+  /** Open a web/mail link in the OS browser (validated main-side). */
+  openExternal(url: string): Promise<void>;
   checkShot(name: string): Promise<void>;
   checkReady(report: Record<string, boolean>): Promise<void>;
 }

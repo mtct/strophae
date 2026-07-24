@@ -92,10 +92,19 @@ packaging/     icons + Mac App Store entitlements (electron-builder
   at request time: configured list → seed defaults → the label itself, so
   agents referencing a removed model keep working and a raw OpenRouter
   string works as a label.
-- **Rich assistant replies**: ```mermaid fences render as diagrams
-  (`components/Mermaid.tsx` — mermaid bundled by Bun, securityLevel
-  strict + htmlLabels off + DOMPurify pass; unterminated fences stay raw
-  text while streaming, parser in `src/shared/fences.ts`).
+- **Rich assistant replies**: replies render as **markdown**
+  (`components/Markdown.tsx` — react-markdown + remark-gfm for
+  tables/task-lists/strikethrough + remark-breaks so single newlines stay
+  line breaks like the old plain-text look). No `rehype-raw`: raw HTML in
+  the untrusted model output is escaped, never parsed, so there is no
+  injection surface. Links open in the OS browser via a new
+  `shell:openExternal` IPC (main-side scheme check: only http/https/mailto;
+  the app window itself stays pinned to index.html, `will-navigate` denied).
+  ```mermaid fences still render as diagrams (`components/Mermaid.tsx` —
+  mermaid bundled by Bun, securityLevel strict + htmlLabels off + DOMPurify
+  pass; unterminated fences stay raw text while streaming, parser in
+  `src/shared/fences.ts`); `AssistantBody` splits mermaid out first, then
+  renders the surrounding text segments as markdown.
 - **Per-persona modality** (`Agent.modality`/`Persona.modality`:
   `'text' | 'image' | 'audio'`, chosen in the compose card's Output
   selector): drives the OpenRouter `modalities` request field and how the
