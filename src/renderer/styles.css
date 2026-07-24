@@ -338,12 +338,35 @@ textarea { resize: none; }
   overflow-x: auto;
   white-space: pre;
 }
+.gen-img-wrap {
+  position: relative;
+  display: inline-block;
+  margin: 6px 0;
+}
 .gen-img {
   display: block;
   max-width: 100%;
   border-radius: 10px;
   border: 1px solid var(--border);
-  margin: 6px 0;
+}
+.gen-img-save {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  font-size: 16px;
+  line-height: 1;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--bg) 78%, transparent);
+  border: 1px solid var(--border);
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+.gen-img-wrap:hover .gen-img-save,
+.gen-img-save:focus-visible {
+  opacity: 1;
 }
 .gen-audio {
   display: block;

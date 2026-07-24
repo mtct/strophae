@@ -41,8 +41,13 @@ export function AttachmentChips(props: {
   );
 }
 
-/** An image attachment shown inline (model-generated pictures). */
-export function StoredImage(props: { att: Attachment }) {
+/** An image attachment shown inline (model-generated pictures), with a
+    button to download it into a local folder. */
+export function StoredImage(props: {
+  att: Attachment;
+  t: T;
+  onToast: (msg: string) => void;
+}) {
   const [url, setUrl] = useState('');
 
   useEffect(() => {
@@ -56,8 +61,29 @@ export function StoredImage(props: { att: Attachment }) {
     };
   }, [props.att.id]);
 
+  const save = async () => {
+    try {
+      if (await api.saveAttachment(props.att)) {
+        props.onToast(props.t('image_saved'));
+      }
+    } catch {
+      props.onToast(props.t('save_failed'));
+    }
+  };
+
   if (!url) return null;
-  return <img className="gen-img" src={url} alt={props.att.name} />;
+  return (
+    <div className="gen-img-wrap">
+      <img className="gen-img" src={url} alt={props.att.name} />
+      <button
+        className="ghost gen-img-save"
+        title={props.t('save_image')}
+        onClick={save}
+      >
+        ⤓
+      </button>
+    </div>
+  );
 }
 
 /** A model-generated audio reply shown inline as a playable clip. */

@@ -125,6 +125,14 @@ export function readAttachment(dir: string, att: Attachment): string {
   return `data:${att.mime};base64,${readFileSync(file).toString('base64')}`;
 }
 
+/** Copy a stored attachment's payload file to a user-chosen path — how a
+    generated image is downloaded to a local folder. */
+export function copyAttachmentTo(
+  dir: string, att: Attachment, dest: string,
+): void {
+  copyFileSync(fileFor(dir, att), dest);
+}
+
 export function deleteAttachmentFiles(dir: string, atts: Attachment[]): void {
   for (const att of atts) {
     try {

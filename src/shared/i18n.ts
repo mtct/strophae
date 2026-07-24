@@ -45,6 +45,9 @@ const en = {
   attachment_failed:
     'Could not attach {name} (unsupported or over 20 MB)',
   file_filter: 'Documents and images',
+  save_image: 'Save image…',
+  image_saved: 'Image saved',
+  save_failed: 'Could not save the image',
   copied_markdown: 'Session copied as Markdown',
   waiting: 'Waiting for the first prompt',
   you: 'You',
@@ -173,6 +176,9 @@ const it: Record<MessageKey, string> = {
   attachment_failed:
     'Impossibile allegare {name} (non supportato o oltre 20 MB)',
   file_filter: 'Documenti e immagini',
+  save_image: 'Salva immagine…',
+  image_saved: 'Immagine salvata',
+  save_failed: 'Impossibile salvare l\'immagine',
   copied_markdown: 'Sessione copiata come Markdown',
   waiting: 'In attesa del primo prompt',
   you: 'Tu',

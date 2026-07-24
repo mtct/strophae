@@ -12,6 +12,7 @@ import type {
   AppState, Attachment, Language, ModelEntry,
 } from '../shared/types';
 import {
+  copyAttachmentTo,
   deleteAttachmentFiles,
   importAttachment,
   importDataUrl,
@@ -118,6 +119,20 @@ export function registerIpc(store: Store, dir: string,
     readAttachment(dir, att));
   ipcMain.handle('att:discard', (_e, att: Attachment) =>
     deleteAttachmentFiles(dir, [att]));
+  // Save a stored attachment (a generated image) to a folder the user picks;
+  // resolves true when written, false when the dialog was dismissed.
+  ipcMain.handle('att:save', async (e, att: Attachment) => {
+    const win = BrowserWindow.fromWebContents(e.sender);
+    if (!win) return false;
+    const ext = (att.name.split('.').pop() ?? '').toLowerCase();
+    const { canceled, filePath } = await dialog.showSaveDialog(win, {
+      defaultPath: att.name,
+      filters: ext ? [{ name: ext.toUpperCase(), extensions: [ext] }] : [],
+    });
+    if (canceled || !filePath) return false;
+    copyAttachmentTo(dir, att, filePath);
+    return true;
+  });
 
   ipcMain.handle('conv:attach', (_e, convId: number, atts: Attachment[]) =>
     store.attachToConversation(convId, atts));

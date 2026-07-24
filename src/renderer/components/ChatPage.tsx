@@ -51,6 +51,7 @@ function AgentColumn(props: {
   expanded: boolean;
   onToggleExpand: () => void;
   onClear: () => void;
+  onToast: (msg: string) => void;
 }) {
   const { t, agent } = props;
   const [menuOpen, setMenuOpen] = useState(false);
@@ -122,7 +123,10 @@ function AgentColumn(props: {
               {textOf(m) !== '' && <AssistantBody text={textOf(m)} />}
               {(m.attachments ?? [])
                 .filter((a) => a.kind === 'image')
-                .map((a) => <StoredImage key={a.id} att={a} />)}
+                .map((a) => (
+                  <StoredImage
+                    key={a.id} att={a} t={t} onToast={props.onToast} />
+                ))}
               {(m.attachments ?? [])
                 .filter((a) => a.kind === 'audio')
                 .map((a) => <StoredAudio key={a.id} att={a} />)}
@@ -387,6 +391,7 @@ export function ChatPage(props: {
               props.onToast(t('thread_cleared'));
               await props.onChanged();
             }}
+            onToast={props.onToast}
           />
         ))}
       </div>

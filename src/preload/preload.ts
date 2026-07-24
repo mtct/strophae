@@ -21,6 +21,7 @@ const api = {
   finalizeMessage: invoke('msg:finalize'),
   pickAttachments: invoke('att:pick'),
   attachmentData: invoke('att:data'),
+  saveAttachment: invoke('att:save'),
   discardAttachment: invoke('att:discard'),
   attachToConversation: invoke('conv:attach'),
   detachFromConversation: invoke('conv:detach'),

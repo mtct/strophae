@@ -38,6 +38,9 @@ export interface StrophaeApi {
   pickAttachments(): Promise<PickResult>;
   /** Plain text for kind 'text', a data: URL for image/pdf. */
   attachmentData(att: Attachment): Promise<string>;
+  /** Save an attachment to a folder the user picks (native dialog);
+      resolves true when written, false when the dialog was dismissed. */
+  saveAttachment(att: Attachment): Promise<boolean>;
   discardAttachment(att: Attachment): Promise<void>;
   attachToConversation(convId: number,
                        atts: Attachment[]): Promise<Conversation>;

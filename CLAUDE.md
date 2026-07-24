@@ -155,4 +155,7 @@ electron-builder packages no node_modules.
   system/user text and sends images (`image_url`) and PDFs (`file` part) as
   base64 data URLs to OpenRouter. Payload files are reference-counted:
   detach/clear/delete GC them (`store.gcAttachments`), plus an orphan sweep
-  at startup.
+  at startup. Generated images can be downloaded to a local folder: the
+  `StoredImage` overlay button calls `att:save`, which pops a native
+  `showSaveDialog` and copies the stored payload file to the chosen path
+  (`copyAttachmentTo` in `src/main/attachments.ts`).
