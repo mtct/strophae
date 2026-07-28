@@ -196,6 +196,19 @@
     color: var(--muted); display: block; margin-bottom: 14px;
   }
 
+  /* screenshots — the window shadow is baked into the transparent PNG/WebP */
+  .shots { display: grid; gap: 56px; }
+  .shot { margin: 0; }
+  .shot a { display: block; text-decoration: none; }
+  .shot img { display: block; width: 100%; height: auto; }
+  .shot a:hover img { opacity: 0.94; }
+  .shot figcaption { font-size: 14.5px; color: var(--muted); max-width: 44em; margin: -8px auto 0; text-align: center; }
+  .shot figcaption b { color: var(--text); font-weight: 600; }
+  .shot .cap-tag {
+    font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.07em; text-transform: uppercase;
+    color: var(--muted); display: block; margin-bottom: 8px;
+  }
+
   /* chorus aside */
   .chorus { text-align: center; }
   .chorus .greek {
@@ -254,6 +267,7 @@
     <a class="brand" href="#"><img src="icon.png" alt="" width="26" height="26">strophae</a>
     <nav>
       <a href="#features">Features</a>
+      <a href="#screenshots">Screenshots</a>
       <a href="#privacy">Privacy</a>
       <a href="#source">Run it</a>
       <a href="#support">Support</a>
@@ -376,6 +390,41 @@
           <h3>In your language</h3>
           <p>The interface speaks English and Italian, following your OS. Your words and the models' replies are never translated behind your back.</p>
         </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="screenshots">
+    <div class="wrap">
+      <div class="section-mark" aria-hidden="true"><span class="hue-blue"></span><span class="hue-purple"></span><span class="hue-green"></span></div>
+      <h2>The council, at work</h2>
+      <p class="section-lede">Two real sessions, captured as they came out of the app —
+      one prompt typed once, every column answering it at the same time.</p>
+      <div class="shots">
+        <figure class="shot">
+          <a href="shot-image-agents.webp" title="Open full size">
+            <img src="shot-image-agents.webp" width="2400" height="1372" loading="lazy" decoding="async"
+                 alt="strophae showing three image agents — Raffaello, Monet and Rembrandt, all on Gemini 2.5 Flash Image — each painting the same prompt about a deserted beach in a storm, side by side in three columns.">
+          </a>
+          <figcaption>
+            <span class="cap-tag">Image agents</span>
+            <b>Three painters, one storm.</b> Give each agent an image model and its own
+            brief: the same prompt comes back as three different canvases, streamed into
+            their columns and kept with the session — one button saves any of them to disk.
+          </figcaption>
+        </figure>
+        <figure class="shot">
+          <a href="shot-six-hats.webp" title="Open full size">
+            <img src="shot-six-hats.webp" width="2400" height="1372" loading="lazy" decoding="async"
+                 alt="strophae showing the Six Thinking Hats personas — Red, Black, Yellow, Green and Blue Hat — answering a question about rewriting a Django backend in Rust, each in its own colour-coded column with markdown-formatted replies.">
+          </a>
+          <figcaption>
+            <span class="cap-tag">Six Thinking Hats</span>
+            <b>One decision, six angles.</b> The bundled persona library seats de Bono's
+            hats around your question — emotion, judgment, benefit, ideas, planning —
+            and every answer lands as formatted markdown you can read side by side.
+          </figcaption>
+        </figure>
       </div>
     </div>
   </section>
