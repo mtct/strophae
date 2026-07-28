@@ -6,18 +6,39 @@ import { join } from 'node:path';
 
 import { attachmentsDir } from '../src/main/attachments';
 import { Store } from '../src/main/store';
+import type { Lang } from '../src/shared/i18n';
 import type { Attachment } from '../src/shared/types';
 
 let dir: string;
 let store: Store;
 
+// A Store writes through a 150 ms debounce, so one is still owed a write
+// for a while after the last mutation — that is what `flush()` on quit is
+// for in the app. Tests need the same shutdown: pulling a store's directory
+// out from under a pending timer makes it throw ENOENT from inside
+// setTimeout, failing the run wherever the timer wins the race. Every store
+// built here is tracked, flushed at teardown, and only then has its
+// directory removed.
+const open: { dir: string; store: Store }[] = [];
+
+function openStore(lang: Lang = 'en', at?: string): Store {
+  const path = at ?? mkdtempSync(join(tmpdir(), 'strophae-'));
+  const opened = new Store(path, lang);
+  open.push({ dir: path, store: opened });
+  return opened;
+}
+
 beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), 'strophae-'));
-  store = new Store(dir, 'en');
+  store = openStore('en', dir);
 });
 
 afterEach(() => {
-  rmSync(dir, { recursive: true, force: true });
+  const used = open.splice(0);
+  // Flush every store before removing any directory: stores sharing a
+  // directory (a document reopened mid-test) must all settle first.
+  for (const { store: s } of used) s.flush();
+  for (const { dir: d } of used) rmSync(d, { recursive: true, force: true });
 });
 
 describe('sessions', () => {
@@ -36,7 +57,7 @@ describe('sessions', () => {
   });
 
   test('localized defaults are materialised in the store language', () => {
-    const itStore = new Store(mkdtempSync(join(tmpdir(), 'strophae-')), 'it');
+    const itStore = openStore('it');
     const conv = itStore.createSession();
     expect(conv.title).toBe('Nuova sessione');
     expect(conv.agents[0]!.systemPrompt).toContain('assistente');
@@ -151,7 +172,7 @@ describe('agents & personas', () => {
   });
 
   test('the seeded hats are materialised in the store language', () => {
-    const itStore = new Store(mkdtempSync(join(tmpdir(), 'strophae-')), 'it');
+    const itStore = openStore('it');
     expect(itStore.personas()[0]!.name).toBe('Cappello Bianco — Fatti');
   });
 
@@ -176,7 +197,7 @@ describe('agents & personas', () => {
   test('re-translation survives a reload and flips back on switch-back', () => {
     store.setLanguage('it');
     store.flush();
-    const reopened = new Store(dir, 'en'); // osLang ignored: setting wins
+    const reopened = openStore('en', dir); // osLang ignored: setting wins
     expect(reopened.personas()[0]!.name).toBe('Cappello Bianco — Fatti');
     reopened.setLanguage('en');
     expect(reopened.personas()[0]!.name).toBe('White Hat — Facts');
@@ -215,7 +236,7 @@ describe('agents & personas', () => {
     expect(store.personas().some((p) => p.id === doomed.id)).toBe(false);
     store.flush();
     // A later run must not resurrect the deleted library entry.
-    expect(new Store(dir, 'en').personas()).toHaveLength(before - 1);
+    expect(openStore('en', dir).personas()).toHaveLength(before - 1);
   });
 
   test('deleting a persona leaves agents built from it untouched', () => {
@@ -246,10 +267,9 @@ describe('agents & personas', () => {
       }],
       settings: { language: '', models: [] },
     }));
-    const migrated = new Store(legacy, 'en');
+    const migrated = openStore('en', legacy);
     expect(migrated.conversation(1).agents[0]!.modality).toBe('image');
     expect(migrated.personas().find((p) => p.id === 3)!.modality).toBe('audio');
-    rmSync(legacy, { recursive: true, force: true });
   });
 
   test('documents seeded before the media personas gain them once', () => {
@@ -267,7 +287,7 @@ describe('agents & personas', () => {
       settings: { language: 'en', models: [] },
       personasSeeded: true,
     }));
-    const store2 = new Store(older, 'en');
+    const store2 = openStore('en', older);
     const raffaello =
       store2.personas().find((p) => p.personaType === 'raffaello');
     const iggy = store2.personas().find((p) => p.personaType === 'iggy');
@@ -281,12 +301,11 @@ describe('agents & personas', () => {
     // the group must not be seeded twice.
     store2.deletePersona(iggy!.id);
     store2.flush();
-    const reopened = new Store(older, 'en');
+    const reopened = openStore('en', older);
     expect(reopened.personas().some((p) => p.personaType === 'iggy'))
       .toBe(false);
     expect(reopened.personas().filter((p) => p.personaType === 'raffaello'))
       .toHaveLength(1);
-    rmSync(older, { recursive: true, force: true });
   });
 });
 
@@ -362,7 +381,7 @@ describe('attachments', () => {
     const orphan = fakeAtt(store.claimId());
     seed(orphan);
     store.flush();
-    new Store(dir, 'en');
+    openStore('en', dir);
     expect(existsSync(payloadPath(kept.id))).toBe(true);
     expect(existsSync(payloadPath(orphan.id))).toBe(false);
   });
@@ -382,7 +401,7 @@ describe('model settings', () => {
       { label: '', slug: 'x/y' },
     ]);
     store.flush();
-    const models = new Store(dir, 'en').settings().models;
+    const models = openStore('en', dir).settings().models;
     expect(models).toEqual(
       [{ label: 'Kimi K2', slug: 'moonshotai/kimi-k2' }]);
   });
@@ -405,7 +424,7 @@ describe('persistence', () => {
     const conv = store.createSession();
     store.send(conv.id, 'persist me');
     store.flush();
-    const reloaded = new Store(dir, 'en');
+    const reloaded = openStore('en', dir);
     expect(reloaded.conversations()).toHaveLength(1);
     expect(reloaded.conversations()[0]!.title).toBe('persist me');
   });
