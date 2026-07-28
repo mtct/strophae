@@ -1,0 +1,57 @@
+name: CI
+
+# Fast checks on every push and pull request. The packaged desktop builds
+# live in desktop.yml and only run on demand or on a version tag.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Typecheck & tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Typecheck
+        run: bunx tsc --noEmit
+
+      - name: Unit tests
+        run: bun test
+
+      - name: Bundle
+        run: bun run build
+
+  smoke:
+    name: Headless smoke test
+    # Runs on macOS: the check mode boots a real (hidden) BrowserWindow, so it
+    # needs a working window server rather than a bare Linux runner.
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Bundle
+        run: bun run build
+
+      - name: Boot the app and walk compose → chat
+        run: bunx electron . --check
+        env:
+          ELECTRON_RUN_AS_NODE: ''

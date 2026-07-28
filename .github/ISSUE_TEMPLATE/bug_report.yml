@@ -1,0 +1,57 @@
+name: Bug report
+description: Something in the app behaves incorrectly
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. If this is a **security** issue, please don't
+        file it here — follow [SECURITY.md](https://github.com/mtct/strophae/blob/main/SECURITY.md)
+        instead.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What you did, what you saw, and what you expected instead.
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Compose a council with …
+        2. Send the prompt …
+        3. The column for agent X …
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: OS and version
+      placeholder: macOS 15.2 / Windows 11 23H2
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: strophae version
+      description: From the release you downloaded, or the commit if running from source.
+    validations:
+      required: true
+
+  - type: input
+    id: models
+    attributes:
+      label: Models involved
+      description: Which OpenRouter models the affected agents were using, if relevant.
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else
+      description: Screenshots, console output, or notes. Please redact your API key.

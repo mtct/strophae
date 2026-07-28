@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+release/
+*.tsbuildinfo
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+
+# Editor
+.idea/
+.vscode/
+
+# Local env overrides
+.env
+.env.*
+
+# Local agent tooling (not part of the project)
+.specify/
+.claude/skills/
+.claude/settings.local.json
