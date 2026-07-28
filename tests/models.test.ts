@@ -33,7 +33,7 @@ describe('modelSlug', () => {
   });
 
   test('audio-output heuristic spots speech models only', () => {
-    expect(supportsAudioOutput('openai/gpt-4o-audio-preview')).toBe(true);
+    expect(supportsAudioOutput('openai/gpt-audio-mini')).toBe(true);
     expect(supportsAudioOutput('some/model-tts')).toBe(true);
     expect(supportsAudioOutput('openai/gpt-4o')).toBe(false);
     expect(supportsAudioOutput('google/gemini-2.5-flash-image')).toBe(false);
@@ -41,7 +41,7 @@ describe('modelSlug', () => {
 
   test('defaultModality maps a slug to its most likely output', () => {
     expect(defaultModality('google/gemini-2.5-flash-image')).toBe('image');
-    expect(defaultModality('openai/gpt-4o-audio-preview')).toBe('audio');
+    expect(defaultModality('openai/gpt-audio-mini')).toBe('audio');
     expect(defaultModality('anthropic/claude-sonnet-4')).toBe('text');
   });
 

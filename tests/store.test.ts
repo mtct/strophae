@@ -1,12 +1,14 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync }
-  from 'node:fs';
+import {
+  existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { attachmentsDir } from '../src/main/attachments';
 import { Store } from '../src/main/store';
 import type { Lang } from '../src/shared/i18n';
+import { modelSlug } from '../src/shared/models';
 import type { Attachment } from '../src/shared/types';
 
 let dir: string;
@@ -162,7 +164,7 @@ describe('agents & personas', () => {
     const iggy = store.personas().find((p) => p.personaType === 'iggy')!;
     expect(iggy.name).toBe('Iggy');
     expect(iggy.modality).toBe('audio');
-    expect(iggy.model).toBe('GPT-4o Audio');
+    expect(iggy.model).toBe('GPT Audio mini');
     // Added to a session, a media persona carries its modality and model
     // onto the agent, so it renders images/audio without further setup.
     const conv = store.createSession();
@@ -248,6 +250,108 @@ describe('agents & personas', () => {
       .find((a) => a.id === agent.id)!;
     expect(kept.name).toBe(hat.name);
     expect(kept.systemPrompt).toBe(hat.systemPrompt);
+  });
+
+  test('documents on the retired audio model follow the seed to its heir',
+    () => {
+      const stale = mkdtempSync(join(tmpdir(), 'strophae-'));
+      writeFileSync(join(stale, 'strophae.json'), JSON.stringify({
+        nextId: 50,
+        conversations: [{
+          id: 1, title: 't', sharedSystemPrompt: '', createdAt: '',
+          updatedAt: '',
+          agents: [{
+            id: 2, name: 'Iggy', hue: 60, model: 'GPT-4o Audio',
+            personaType: 'iggy', modality: 'audio', systemPrompt: '',
+            order: 0, messages: [],
+          }],
+        }],
+        personas: [
+          {
+            id: 3, name: 'Iggy', hue: 60, model: 'GPT-4o Audio',
+            personaType: 'iggy', modality: 'audio', systemPrompt: '',
+            createdAt: '',
+          },
+          // Edited by the user: same model, own name — relabelled too, so
+          // it keeps pointing at a model that exists.
+          {
+            id: 4, name: 'Narratore', hue: 30, model: 'GPT-4o Audio',
+            personaType: 'generic', modality: 'audio', systemPrompt: '',
+            createdAt: '',
+          },
+        ],
+        personasSeeded: true,
+        mediaPersonasSeeded: true,
+        settings: {
+          language: '',
+          models: [
+            { label: 'GPT-4o', slug: 'openai/gpt-4o' },
+            { label: 'GPT-4o Audio', slug: 'openai/gpt-4o-audio-preview' },
+          ],
+        },
+      }));
+      const migrated = openStore('en', stale);
+      expect(migrated.settings().models).toContainEqual(
+        { label: 'GPT Audio mini', slug: 'openai/gpt-audio-mini' });
+      expect(migrated.settings().models.map((m) => m.label))
+        .not.toContain('GPT-4o Audio');
+      expect(migrated.conversation(1).agents[0]!.model).toBe('GPT Audio mini');
+      for (const p of migrated.personas()) {
+        if (p.id === 3 || p.id === 4) expect(p.model).toBe('GPT Audio mini');
+      }
+      // The repointing is written through, not just held in memory.
+      migrated.flush();
+      const onDisk = readFileSync(join(stale, 'strophae.json'), 'utf-8');
+      expect(onDisk).not.toContain('gpt-4o-audio-preview');
+    });
+
+  test('a trimmed list still repoints the agents naming the retired model',
+    () => {
+      const trimmed = mkdtempSync(join(tmpdir(), 'strophae-'));
+      writeFileSync(join(trimmed, 'strophae.json'), JSON.stringify({
+        nextId: 10,
+        conversations: [],
+        personas: [{
+          id: 1, name: 'Iggy', hue: 60, model: 'GPT-4o Audio',
+          personaType: 'iggy', modality: 'audio', systemPrompt: '',
+          createdAt: '',
+        }],
+        personasSeeded: true,
+        mediaPersonasSeeded: true,
+        // The user kept one model: Iggy's label resolves through neither
+        // this list nor (once retired) the seed defaults.
+        settings: {
+          language: '',
+          models: [{ label: 'DeepSeek 4 Flash', slug: 'deepseek/deepseek-v4-flash' }],
+        },
+      }));
+      const migrated = openStore('en', trimmed);
+      expect(migrated.personas()[0]!.model).toBe('GPT Audio mini');
+      // The curated list is the user's: repointing does not grow it.
+      expect(migrated.settings().models).toEqual(
+        [{ label: 'DeepSeek 4 Flash', slug: 'deepseek/deepseek-v4-flash' }]);
+      // …and the heir resolves anyway, through the seed defaults.
+      expect(modelSlug(migrated.personas()[0]!.model,
+        migrated.settings().models)).toBe('openai/gpt-audio-mini');
+    });
+
+  test('a model list the user edited off the seed is left alone', () => {
+    const own = mkdtempSync(join(tmpdir(), 'strophae-'));
+    writeFileSync(join(own, 'strophae.json'), JSON.stringify({
+      nextId: 10,
+      conversations: [],
+      personas: [],
+      personasSeeded: true,
+      mediaPersonasSeeded: true,
+      settings: {
+        language: '',
+        // Same label, a slug the user chose: not the retired seed entry.
+        models: [{ label: 'GPT-4o Audio', slug: 'openai/gpt-audio' }],
+      },
+    }));
+    const kept = openStore('en', own);
+    expect(kept.settings().models).toEqual(
+      [{ label: 'GPT-4o Audio', slug: 'openai/gpt-audio' }]);
   });
 
   test('legacy documents backfill modality from the model slug', () => {

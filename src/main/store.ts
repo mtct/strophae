@@ -46,6 +46,18 @@ interface Data {
   mediaPersonasSeeded?: boolean;
 }
 
+// A seed model that OpenRouter retired: openai/gpt-4o-audio-preview is gone
+// from the catalog, so every audio reply from a document seeded with it
+// failed. Documents still carrying the untouched seed entry are repointed at
+// the current GPT audio model, together with the agents and personas (Iggy)
+// naming it — a user who edited either side keeps their own choice.
+const RETIRED_AUDIO_MODEL = {
+  label: 'GPT-4o Audio',
+  slug: 'openai/gpt-4o-audio-preview',
+  toLabel: 'GPT Audio mini',
+  toSlug: 'openai/gpt-audio-mini',
+};
+
 const EMPTY: Data = {
   nextId: 1,
   conversations: [],
@@ -62,8 +74,42 @@ export class Store {
     mkdirSync(dir, { recursive: true });
     this.file = join(dir, 'strophae.json');
     this.data = this.load();
+    if (this.repointRetiredAudioModel()) this.save();
     this.seedPersonas();
     sweepAttachments(dir, this.referencedAttachmentIds());
+  }
+
+  /** Follow the seed list from the retired audio model to its replacement,
+      relabelling the agents and personas (Iggy) that name it. Returns
+      whether anything moved.
+
+      Two documents need this: one still carrying the stock model entry, and
+      one whose list was trimmed without it — there the label dangles, and
+      relabelling alone is the fix, since an agent naming a model the list
+      dropped still resolves through the seed defaults. A user who pointed
+      that label at a model of their own matches neither and is left be. */
+  private repointRetiredAudioModel(): boolean {
+    const { label, slug, toLabel, toSlug } = RETIRED_AUDIO_MODEL;
+    const models = this.data.settings.models;
+    const stale = models.find((m) => m.label === label);
+    if (stale && stale.slug !== slug) return false;
+
+    const named: { model: string }[] = [
+      ...this.data.conversations.flatMap((c) => c.agents),
+      ...this.data.personas,
+    ];
+    if (!stale && !named.some((m) => m.model === label)) return false;
+
+    const heir = models.find((m) => m.label === toLabel);
+    if (stale && heir) {
+      // Both entries present: drop the retired one rather than duplicate.
+      models.splice(models.indexOf(stale), 1);
+    } else if (stale) {
+      stale.label = toLabel;
+      stale.slug = toSlug;
+    }
+    for (const m of named) if (m.model === label) m.model = toLabel;
+    return true;
   }
 
   /** Materialise the seed persona library, in the language in force at that

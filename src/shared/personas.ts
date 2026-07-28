@@ -80,6 +80,6 @@ export const MEDIA_PERSONAS: SeedPersona[] = [
     promptKey: 'persona_iggy_prompt',
     hue: 60, // amber, unused by the hats
     modality: 'audio',
-    modelLabel: 'GPT-4o Audio',
+    modelLabel: 'GPT Audio mini',
   },
 ];

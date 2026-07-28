@@ -19,7 +19,7 @@ export const DEFAULT_MODELS: ModelEntry[] = [
   // Image- and audio-output models, so a fresh install can pick a persona
   // for each modality without editing the list first.
   { label: 'Gemini 2.5 Flash Image', slug: 'google/gemini-2.5-flash-image' },
-  { label: 'GPT-4o Audio', slug: 'openai/gpt-4o-audio-preview' },
+  { label: 'GPT Audio mini', slug: 'openai/gpt-audio-mini' },
 ];
 
 /** Configured list first, then the seed defaults (so agents keep working
