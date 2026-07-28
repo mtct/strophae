@@ -39,7 +39,8 @@ function createWindow(): BrowserWindow {
     minHeight: 700,
     show: !CHECK,
     title: 'strophae',
-    backgroundColor: '#f7f7f8',
+    // The paper board of the renderer, so the window never flashes white.
+    backgroundColor: '#e9e5db',
     webPreferences: {
       // Bun inlines __dirname to the *source* dir at bundle time, so paths
       // must go through the app root instead.

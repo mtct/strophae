@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 
 import { pcm16ToWav } from '../../shared/audio';
 import { splitFences } from '../../shared/fences';
@@ -15,7 +15,7 @@ import {
   foldSystemIntoUser, streamAgent,
   type ChatMessage, type ContentPart,
 } from '../openrouter';
-import { accent, headerBg, soft } from '../theme';
+import { accent } from '../theme';
 import {
   AttachButton, AttachmentChips, StoredAudio, StoredImage,
 } from './Attachments';
@@ -75,10 +75,12 @@ function AgentColumn(props: {
       || props.streamingIds.has(m.id));
 
   return (
-    <section className={`agent-column${props.hidden ? ' hidden' : ''}`}>
-      <header className="col-header"
-              style={{ background: headerBg(agent.hue) }}>
-        <span className="dot" style={{ background: accent(agent.hue) }} />
+    <section
+      className={`agent-column${props.hidden ? ' hidden' : ''}`}
+      // The spine colour, plus everything styles.css mixes from it.
+      style={{ '--agent': accent(agent.hue) } as CSSProperties}
+    >
+      <header className="col-header">
         <span className="name">{agent.name}</span>
         <span className="model">{agent.model}</span>
         <button
@@ -111,8 +113,10 @@ function AgentColumn(props: {
         )}
         {visible.map((m) =>
           m.role === 'user' ? (
-            <div key={m.id} className="msg-user"
-                 style={{ background: soft(agent.hue) }}>
+            <div key={m.id} className="msg-user">
+              {/* The call every voice answers, named as such: the prompt
+                  repeats at the head of each column. */}
+              <span className="turn-label">{t('you')}</span>
               <AttachmentChips t={t} attachments={m.attachments ?? []} />
               {m.text}
             </div>

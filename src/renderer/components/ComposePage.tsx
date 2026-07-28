@@ -49,7 +49,9 @@ function AgentCard(props: {
 
   return (
     <div className="agent-card">
-      <div className="bar" style={{ background: accent(agent.hue) }} />
+      {/* The persona's colour lives on the spine of its sheet, the same
+          edge the chat column carries it on. */}
+      <div className="spine" style={{ background: accent(agent.hue) }} />
       <div className="body">
         <div className="row">
           <input

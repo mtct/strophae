@@ -7,8 +7,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **strophae** is a multi-persona ("multi-LLM") chat desktop app for macOS and
 Windows, built with **Electron + Bun + React**. One prompt is broadcast in
 parallel to several agents — each with its own name, colour, model and system
-prompt — and every agent answers in its own column, streaming live. The
-visual identity comes from a `claude.ai/design` prototype.
+prompt — and every agent answers in its own column, streaming live.
+
+The visual identity is "the chorus notebook": a warm grey paper board, every
+panel a sheet laid on it, each persona owning a coloured spine down the left
+edge of its sheet. Content (replies, prompts, persona names) is set in an
+old-style book serif from the system — Iowan Old Style / Sitka Text /
+Charter / Constantia, so nothing is downloaded — while the chrome stays in
+the system sans with small-caps labelled rules. The rule that carries the
+identity: surfaces you *write* on are manuscript paper (a margin line down
+every textarea, an empty column ruled like a blank sheet), surfaces the
+chorus *prints* on are plain typeset stock. Turns are capped at a 76ch book
+measure, so a column expanded to the whole window still reads as a page.
 
 ## Stack & commands
 
@@ -53,7 +63,9 @@ src/preload/   preload.ts (contextBridge → window.strophae)
 src/renderer/  React app: App.tsx (state, view routing, toasts) ·
                components/ (Sidebar, ComposePage, ChatPage, SettingsModal) ·
                api.ts (typed preload bridge) · openrouter.ts (SSE streaming) ·
-               theme.ts (oklch accents) · styles.css · index.html (CSP)
+               theme.ts (oklch pigment accent per hue; a column publishes it
+               as the --agent custom property and styles.css mixes the rest
+               off it) · styles.css · index.html (CSP)
 scripts/       bundle.ts (Bun.build for main/preload/renderer + static copy)
 tests/         bun test suites for src/shared (audio, models, fences,
                i18n, time) + src/main (store, attachments)
@@ -180,3 +192,8 @@ electron-builder packages no node_modules.
   `StoredImage` overlay button calls `att:save`, which pops a native
   `showSaveDialog` and copies the stored payload file to the chosen path
   (`copyAttachmentTo` in `src/main/attachments.ts`).
+
+<!-- SPECKIT START -->
+For additional context about technologies to be used, project structure,
+shell commands, and other important information, read the current plan
+<!-- SPECKIT END -->
