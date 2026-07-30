@@ -110,6 +110,9 @@
   .support .band { text-align: center; }
   .support .band h2 { margin-bottom: 12px; }
   .support .band p.lead { font-size: 16px; color: #c3c3cc; max-width: 34em; margin: 0 auto 26px; }
+  .support .btn-row {
+    display: flex; flex-wrap: wrap; gap: 12px; justify-content: center;
+  }
   .support .heart-btn {
     display: inline-flex; align-items: center; gap: 9px;
     background: #fff; color: var(--text); border-radius: 10px;
@@ -117,6 +120,11 @@
   }
   .support .heart-btn:hover { background: #ececf1; }
   .support .heart-btn svg { width: 17px; height: 17px; color: #e0567a; }
+  .support .heart-btn.alt {
+    background: transparent; color: #fff; box-shadow: inset 0 0 0 1px #55555f;
+  }
+  .support .heart-btn.alt:hover { background: #ffffff14; }
+  .support .heart-btn.alt svg { color: #ff5e5b; }
   .support .note { font-size: 13px; color: #9a9aa6; margin: 18px 0 0; }
 
   /* ——— the chorus demo (faithful chat-view chrome) */
@@ -492,10 +500,16 @@ bun run start</pre>
         <p class="lead">strophae is free, MIT-licensed and built by one person in
         the open. If it saves you a stack of chat tabs, a small donation helps
         keep the columns streaming — and the store releases coming.</p>
-        <a class="heart-btn" href="https://github.com/sponsors/mtct">
-          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-          Sponsor on GitHub
-        </a>
+        <div class="btn-row">
+          <a class="heart-btn" href="https://github.com/sponsors/mtct">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+            Sponsor on GitHub
+          </a>
+          <a class="heart-btn alt" href="https://ko-fi.com/mtct">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 4h13a4 4 0 0 1 0 8h-1.1a5 5 0 0 1-4.9 4H8a5 5 0 0 1-5-5V5a1 1 0 0 1 1-1zm12 6h1a2 2 0 0 0 0-4h-1v4zM3 19h15a1 1 0 0 1 0 2H3a1 1 0 0 1 0-2z"/></svg>
+            Buy me a coffee on Ko-fi
+          </a>
+        </div>
         <p class="note">Every contribution goes straight into strophae's development.</p>
       </div>
     </div>
@@ -508,6 +522,7 @@ bun run start</pre>
     <span>MIT License · Matteo Costa</span>
     <span class="spacer"></span>
     <a href="https://github.com/sponsors/mtct">Sponsor</a>
+    <a href="https://ko-fi.com/mtct">Ko-fi</a>
     <a href="https://github.com/mtct/strophae">Source on GitHub</a>
     <span>Electron + Bun + React</span>
   </div>

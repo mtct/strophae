@@ -3,6 +3,8 @@
 [![CI](https://github.com/mtct/strophae/actions/workflows/ci.yml/badge.svg)](https://github.com/mtct/strophae/actions/workflows/ci.yml)
 [![Desktop builds](https://github.com/mtct/strophae/actions/workflows/desktop.yml/badge.svg)](https://github.com/mtct/strophae/actions/workflows/desktop.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Ko-fi](https://img.shields.io/badge/Ko--fi-buy%20me%20a%20coffee-ff5e5b.svg?logo=ko-fi&logoColor=white)](https://ko-fi.com/mtct)
+[![Sponsor](https://img.shields.io/badge/sponsor-GitHub-ea4aaa.svg?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/mtct)
 
 Multi-persona chat. One prompt, many minds — broadcast a message to several agents at
 once, each with its own model, system prompt and colour, and watch them answer in
@@ -72,6 +74,17 @@ for the setup, the checks to run, and the handful of constraints worth knowing
 about (zero runtime dependencies, sandboxed renderer, i18n key parity).
 Architecture and developer notes live in [CLAUDE.md](CLAUDE.md); security
 reports go through [SECURITY.md](SECURITY.md), not the public issue tracker.
+
+## Support
+
+strophae is free, MIT-licensed and built by one person in the open. If it saves
+you a stack of chat tabs, a donation helps keep the columns streaming — and the
+store releases coming:
+
+- ☕ [Buy me a coffee on Ko-fi](https://ko-fi.com/mtct) — one-off, no account needed
+- ❤️ [Sponsor on GitHub](https://github.com/sponsors/mtct) — monthly or one-off
+
+Starring the repo and filing good bug reports help just as much, and are free.
 
 ## Licence
 
