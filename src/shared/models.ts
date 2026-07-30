@@ -54,7 +54,9 @@ export function defaultModality(slug: string): Modality {
 }
 
 // Accent hue palette reused across agents and personas (chat/models.py).
-export const HUE_PALETTE = [255, 150, 310, 60, 200, 30, 340, 100, 285, 20];
+// The three primaries lead, so a fresh council of three is blue, red and
+// yellow — the triad the rest of the identity is built on.
+export const HUE_PALETTE = [255, 30, 100, 150, 200, 310, 340, 60, 285, 20];
 
 export function nextHue(used: number[]): number {
   for (const h of HUE_PALETTE) if (!used.includes(h)) return h;

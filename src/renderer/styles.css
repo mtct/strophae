@@ -1,41 +1,53 @@
-/* strophae — "the chorus notebook".
-   A desk of paper: the app board is warm grey stock, every panel is a sheet
-   laid on it, and each persona owns a coloured spine down its left edge.
-   The one rule that carries the identity: surfaces you *write* on are ruled
-   manuscript paper (margin line, ruled empty column), surfaces the chorus
-   *prints* on are plain typeset stock. Per-hue accents arrive as inline
-   custom properties (--agent) from theme.ts and are mixed here. */
+/* strophae — the chorus, set as a poster.
+   A warm grey board, white sheets laid on it, and every edge a hard black
+   keyline: no radii, no shadows, no gradients, no tints. Depth comes from
+   rules and solid fields, the way it does in print. Each persona owns a
+   fat colour bar down the left edge of its sheet — the one place a
+   saturated pigment is allowed to shout.
+
+   The rule that carries the identity: what the chorus *prints* is a plain
+   white sheet, what you *write on* is marked by a solid ink bar down its
+   left edge. Chrome (labels, stamped controls) is set lowercase and
+   letterspaced in a geometric sans, after the Bauhaus Dessau habit that
+   the lowercase product name already asks for; anything the user or a
+   model wrote keeps its own case and reads in the text sans.
+
+   Per-hue accents arrive as inline custom properties (--agent) from
+   theme.ts; --agent-ink is the readable foreground for a filled accent. */
 
 :root {
-  /* paper */
-  --board: #e9e5db;
-  --board-2: #e2ddd1;
-  --sheet: #fcfbf7;
-  --sheet-2: #f4f1e8;
-  /* rules, lightest last */
-  --rule: #d6d0c2;
-  --rule-soft: #e4dfd2;
-  --rule-faint: #ebe7dc;
-  --rule-ghost: rgb(35 36 43 / 4%);
-  --margin-line: #d3ab9f;
+  /* board & sheets */
+  --board: #e3e0d8;
+  --board-2: #d9d5ca;
+  --sheet: #ffffff;
+  --sheet-2: #f1eee6;
   /* ink */
-  --ink: #23242b;
-  --ink-soft: #6a6862;
-  --ink-faint: #979185;
-  --marker: oklch(0.47 0.1 258);
+  --ink: #121212;
+  --ink-soft: #5f5b52;
+  --ink-faint: #8d8879;
+  --paper: #e9e6de;
+  /* rules: the hard keyline, then hairlines for what divides one sheet */
+  --rule: #121212;
+  --rule-soft: #cbc5b6;
+  --rule-faint: #e0dbcd;
+  /* the triad, for fixed meanings: focus and links blue, the stamped
+     control red, a held state yellow */
+  --blue: #1b34c4;
+  --red: #cb2a17;
+  --yellow: #f0c000;
+  --marker: var(--blue);
 
-  --serif: 'Iowan Old Style', 'Sitka Text', Charter, Constantia, Cambria,
-    'Palatino Linotype', Palatino, Georgia, serif;
-  --sans: ui-sans-serif, -apple-system, 'Segoe UI Variable Text', 'Segoe UI',
-    system-ui, sans-serif;
+  --display: Futura, 'Avenir Next', 'Century Gothic', Bahnschrift,
+    'Segoe UI', system-ui, sans-serif;
+  --sans: -apple-system, 'Segoe UI Variable Text', 'Segoe UI', system-ui,
+    sans-serif;
   --mono: ui-monospace, 'SF Mono', Menlo, 'Cascadia Mono', Consolas, monospace;
 
-  --r: 3px;
-  --lift: 0 1px 1px rgb(60 52 40 / 5%), 0 8px 18px -12px rgb(60 52 40 / 30%);
-  --lift-high: 0 2px 4px rgb(60 52 40 / 8%), 0 22px 48px -20px rgb(60 52 40 / 45%);
-  /* Paper tooth: one tiny turbulence tile, kept far below the text. */
-  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23g)' opacity='0.045'/%3E%3C/svg%3E");
-  --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%236a6862' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --r: 0;
+  --key: 1px;   /* a control's edge */
+  --frame: 2px; /* the keyline around a sheet — heavier, so panels lead */
+  --bar: 3px;   /* a structural bar: section rules, writing edges */
+  --spine: 7px; /* a persona's colour down its sheet */
 }
 
 * { box-sizing: border-box; }
@@ -46,17 +58,31 @@ body {
   font-family: var(--sans);
   font-size: 13px;
   color: var(--ink);
-  background: var(--grain) repeat, var(--board);
-  background-attachment: fixed;
+  background: var(--board);
   -webkit-font-smoothing: antialiased;
 }
 
 .app { display: flex; height: 100%; }
 
 :focus-visible {
-  outline: 2px solid var(--marker);
-  outline-offset: 1px;
-  border-radius: 2px;
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+  border-radius: 0;
+}
+
+/* A label: lowercase, letterspaced, set in the geometric sans. Only ever
+   product text — never something the user or a model wrote. */
+.section-label,
+.group-label,
+.turn-label,
+.modality-row,
+.modal label,
+button.accent,
+.card-actions button,
+.attach-btn {
+  font-family: var(--display);
+  text-transform: lowercase;
+  letter-spacing: 0.13em;
 }
 
 /* ------------------------------------------------------------- controls */
@@ -67,80 +93,93 @@ button {
   font-weight: 500;
   color: var(--ink);
   background: var(--sheet);
-  border: 1px solid var(--rule);
-  border-radius: var(--r);
+  border: var(--key) solid var(--ink);
+  border-radius: 0;
   padding: 6px 11px;
-  box-shadow: 0 1px 0 rgb(60 52 40 / 4%);
   cursor: pointer;
-  transition: background-color 0.12s ease, border-color 0.12s ease;
+  transition: background-color 0.09s linear, color 0.09s linear;
 }
-button:hover { background: #fff; border-color: #c8c1b1; }
-button:active { box-shadow: inset 0 1px 2px rgb(60 52 40 / 10%); }
-button:disabled { color: var(--ink-faint); cursor: default; box-shadow: none; }
+button:hover { background: var(--ink); color: var(--sheet); }
+button:active { background: #35353c; }
+button:disabled {
+  color: var(--ink-faint);
+  border-color: var(--rule-soft);
+  background: var(--sheet);
+  cursor: default;
+}
 
-/* The one stamped control per screen: new session, start, send, save. */
+/* The one stamped control per screen: new session, start, send, save.
+   Red is reserved for it, so a screen never has two. */
 button.accent {
-  background: var(--ink);
-  color: var(--sheet);
-  border-color: var(--ink);
+  background: var(--red);
+  color: #fff;
+  border-color: var(--red);
   font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  padding: 8px 14px;
+  padding: 8px 15px;
 }
-button.accent:hover { background: #34353e; border-color: #34353e; }
-button.accent:disabled { background: #6f6e69; border-color: #6f6e69; color: var(--sheet-2); }
+button.accent:hover { background: var(--ink); border-color: var(--ink); color: #fff; }
+button.accent:disabled {
+  background: var(--board-2);
+  border-color: var(--rule-soft);
+  color: var(--ink-faint);
+}
+/* Red marks the action that commits a screen, so there is never a second
+   one in view: the sidebar's own stamped control is yellow. */
+.sidebar button.accent {
+  background: var(--yellow);
+  border-color: var(--yellow);
+  color: var(--ink);
+}
+.sidebar button.accent:hover {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--yellow);
+}
 
 button.ghost {
   background: transparent;
   border-color: transparent;
-  box-shadow: none;
   color: var(--ink-soft);
 }
-button.ghost:hover { background: var(--sheet-2); border-color: transparent; color: var(--ink); }
+button.ghost:hover { background: var(--ink); border-color: var(--ink); color: var(--sheet); }
 
 input, textarea, select {
   font-family: var(--sans);
   font-size: 13px;
   color: var(--ink);
   background-color: var(--sheet);
-  border: 1px solid var(--rule);
-  border-radius: var(--r);
+  border: var(--key) solid var(--ink);
+  border-radius: 0;
   padding: 6px 9px;
   outline: none;
-  box-shadow: inset 0 1px 0 rgb(60 52 40 / 4%);
 }
-input:hover, textarea:hover, select:hover { border-color: #c8c1b1; }
+input:hover, textarea:hover, select:hover { background-color: var(--sheet); }
 input:focus, textarea:focus, select:focus {
-  border-color: var(--marker);
-  box-shadow: inset 0 1px 0 rgb(60 52 40 / 4%), 0 0 0 2px rgb(59 90 140 / 14%);
+  border-color: var(--blue);
+  box-shadow: inset 0 0 0 1px var(--blue);
 }
 ::placeholder { color: var(--ink-faint); }
 
 select {
   appearance: none;
   padding-right: 26px;
-  background-image: var(--chevron);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23121212'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 9px center;
-  background-size: 9px auto;
+  background-size: 8px auto;
 }
 
-/* Writing surfaces: ruled paper. The prompt you type is manuscript — serif,
-   with the margin line a notebook leaves down the left edge. */
+/* Writing surfaces carry a solid ink bar down the left edge — the one
+   mark that separates what you write from what the chorus prints. */
 textarea {
   resize: none;
-  font-family: var(--serif);
-  font-size: 13.5px;
+  font-size: 13px;
   line-height: 1.55;
-  padding: 8px 10px 8px 18px;
-  background-image: linear-gradient(var(--margin-line), var(--margin-line));
-  background-repeat: no-repeat;
-  background-size: 1px 100%;
-  background-position: 11px 0;
+  padding: 8px 10px;
+  border-left-width: var(--bar);
 }
-textarea::placeholder { font-style: italic; }
+textarea::placeholder { font-style: normal; }
 
 /* -------------------------------------------------------------- sidebar */
 
@@ -152,17 +191,18 @@ textarea::placeholder { font-style: italic; }
   gap: 10px;
   padding: 16px 14px 14px;
   background: var(--board-2);
-  border-right: 1px solid var(--rule);
+  border-right: var(--frame) solid var(--ink);
 }
 .brand {
-  font-family: var(--serif);
-  font-size: 22px;
+  font-family: var(--display);
+  font-size: 21px;
   font-weight: 600;
-  letter-spacing: -0.005em;
+  letter-spacing: -0.01em;
+  text-transform: lowercase;
   padding-bottom: 11px;
-  border-bottom: 1px solid var(--rule);
+  border-bottom: var(--bar) solid var(--ink);
 }
-.history { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 1px; }
+.history { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; }
 .group-label {
   display: flex;
   align-items: center;
@@ -170,30 +210,29 @@ textarea::placeholder { font-style: italic; }
   color: var(--ink-soft);
   font-size: 9.5px;
   font-weight: 600;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  margin: 14px 2px 6px;
+  margin: 15px 2px 7px;
 }
 .group-label::after {
   content: '';
   flex: 1;
-  height: 1px;
-  background: var(--rule);
+  height: var(--key);
+  background: var(--ink);
 }
 .conv-entry {
   text-align: left;
   background: transparent;
   border-color: transparent;
-  box-shadow: none;
-  padding: 6px 9px;
+  padding: 7px 9px;
   display: block;
   width: 100%;
 }
-.conv-entry:hover { background: rgb(252 251 247 / 55%); border-color: transparent; }
-.conv-entry.active {
-  background: var(--sheet);
-  border-color: var(--rule);
-  box-shadow: 0 1px 0 rgb(60 52 40 / 5%);
+.conv-entry:hover { background: var(--sheet); color: var(--ink); border-color: var(--ink); }
+/* The session you are in is a solid block, not a tinted one. */
+.conv-entry.active,
+.conv-entry.active:hover {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--paper);
 }
 .conv-title {
   font-size: 13px;
@@ -209,10 +248,15 @@ textarea::placeholder { font-style: italic; }
   display: flex;
   gap: 7px;
   align-items: center;
-  margin-top: 3px;
+  margin-top: 4px;
 }
+.conv-entry.active .conv-meta { color: var(--board-2); }
+/* One solid square per voice in the session. */
 .conv-dots { display: inline-flex; gap: 3px; }
-.conv-dots span { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+.conv-dots span { width: 6px; height: 6px; display: inline-block; }
+/* On the ink block of the active session a dark pigment would disappear,
+   so each square keeps a paper ring. */
+.conv-entry.active .conv-dots span { box-shadow: 0 0 0 1px var(--paper); }
 
 /* ---------------------------------------------------------------- pages */
 
@@ -225,40 +269,34 @@ textarea::placeholder { font-style: italic; }
   gap: 12px;
 }
 .page-title {
-  font-family: var(--serif);
-  font-size: 25px;
+  font-family: var(--display);
+  font-size: 26px;
   font-weight: 600;
-  letter-spacing: -0.012em;
+  letter-spacing: -0.02em;
   margin: 0;
 }
-/* Label + rule: the section marker doubles as the divider it sits on. */
+/* Label + rule: the section marker sits on the rule it names. */
 .section-label {
   display: flex;
   align-items: center;
   gap: 10px;
-  color: var(--ink-soft);
+  color: var(--ink);
   font-size: 9.5px;
   font-weight: 600;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
 }
 .section-label::after {
   content: '';
   flex: 1;
-  height: 1px;
-  background: var(--rule);
+  height: var(--bar);
+  background: var(--ink);
 }
 
 /* -------------------------------------------------------------- compose */
 
-/* The shared prompt keeps a readable measure instead of running the full
-   width of a wide window; the card grid below still uses every column. */
 .compose-page .section-label,
 .compose-page .shared-input,
 .compose-page > .attach-row { max-width: 880px; }
 .shared-input { height: 68px; }
-/* Persona cards never scroll sideways: once a row is full the next card
-   wraps underneath, and a tall grid scrolls vertically instead. */
 .cards {
   flex: 1;
   min-height: 0;
@@ -268,17 +306,16 @@ textarea::placeholder { font-style: italic; }
   overflow-y: auto;
   align-items: flex-start;
   align-content: flex-start;
-  padding: 4px 2px;
+  padding: 2px;
 }
 .agent-card {
   position: relative;
   width: 300px;
-  max-width: 100%; /* shrink rather than overflow a very narrow window */
+  max-width: 100%;
   flex: none;
   background: var(--sheet);
-  border: 1px solid var(--rule);
-  border-radius: var(--r);
-  box-shadow: var(--lift);
+  border: var(--frame) solid var(--ink);
+  border-radius: 0;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -289,22 +326,26 @@ textarea::placeholder { font-style: italic; }
   left: 0;
   top: 0;
   bottom: 0;
-  width: 3px;
+  width: var(--spine);
 }
 .agent-card .body {
-  padding: 12px 13px 12px 16px;
+  padding: 12px 13px 12px calc(var(--spine) + 9px);
   display: flex;
   flex-direction: column;
   gap: 9px;
 }
-.agent-card .row { display: flex; gap: 7px; align-items: center; }
+.agent-card .row { display: flex; gap: 7px; align-items: stretch; }
 .agent-card input[type='text'] {
   flex: 1;
   min-width: 0;
-  font-family: var(--serif);
-  font-size: 14.5px;
+  font-family: var(--display);
+  font-size: 15px;
   font-weight: 600;
 }
+/* Cycle the persona's colour: the button *is* the swatch. */
+.swatch-btn { width: 34px; flex: none; padding: 0; }
+.swatch-btn:hover { background: var(--sheet); }
+.swatch-btn .swatch { display: block; width: 100%; height: 100%; min-height: 18px; }
 .agent-card textarea { height: 124px; }
 .modality-row {
   display: flex;
@@ -312,24 +353,20 @@ textarea::placeholder { font-style: italic; }
   gap: 9px;
   font-size: 9.5px;
   font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
   color: var(--ink-soft);
 }
 .modality-row select { flex: 1; min-width: 0; }
 .card-actions {
   display: flex;
   justify-content: space-between;
-  border-top: 1px solid var(--rule-faint);
+  border-top: var(--key) solid var(--rule-soft);
   padding-top: 9px;
   margin-top: 1px;
 }
 .card-actions button {
   font-size: 10px;
   font-weight: 600;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  padding: 4px 7px;
+  padding: 4px 8px;
 }
 .compose-bottom { display: flex; gap: 8px; align-items: center; }
 
@@ -339,15 +376,15 @@ textarea::placeholder { font-style: italic; }
   display: flex;
   align-items: center;
   gap: 8px;
-  border-bottom: 1px solid var(--rule);
+  border-bottom: var(--bar) solid var(--ink);
   padding-bottom: 11px;
 }
 .chat-header h1 {
   flex: 1;
-  font-family: var(--serif);
-  font-size: 20px;
+  font-family: var(--display);
+  font-size: 21px;
   font-weight: 600;
-  letter-spacing: -0.008em;
+  letter-spacing: -0.015em;
   margin: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -365,28 +402,28 @@ textarea::placeholder { font-style: italic; }
   flex: 1 0 320px;
   min-width: 320px;
   background: var(--sheet);
-  border: 1px solid var(--rule);
-  border-left: 3px solid var(--agent, var(--rule));
-  border-radius: var(--r);
-  box-shadow: var(--lift);
+  border: var(--frame) solid var(--ink);
+  border-left: var(--spine) solid var(--agent, var(--ink));
+  border-radius: 0;
   display: flex;
   flex-direction: column;
   min-height: 0;
   overflow: hidden;
 }
 .agent-column.hidden { display: none; }
-/* Running head: whose voice, on what model. */
+/* Running head: whose voice, on what model. Plain stock — the spine is
+   where the colour lives. */
 .col-header {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 9px 8px 9px 13px;
-  background: color-mix(in oklab, var(--agent, var(--sheet)) 7%, var(--sheet));
-  border-bottom: 1px solid var(--rule-soft);
+  padding: 9px 8px 9px 12px;
+  background: var(--sheet);
+  border-bottom: var(--key) solid var(--ink);
 }
 .col-header .name {
-  font-family: var(--serif);
-  font-size: 14.5px;
+  font-family: var(--display);
+  font-size: 15px;
   font-weight: 600;
 }
 .col-header .model {
@@ -398,48 +435,40 @@ textarea::placeholder { font-style: italic; }
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.col-header .expand-btn { padding: 2px 6px; font-size: 13px; }
+.col-header .expand-btn { padding: 2px 7px; font-size: 13px; }
 .thread {
   flex: 1;
   overflow-y: auto;
   padding: 14px 15px 16px;
   display: flex;
   flex-direction: column;
-  gap: 13px;
-}
-/* Nothing written yet: a blank ruled sheet. The rules stop at the thread's
-   padding, so the sheet keeps its margins instead of reading as a grid. */
-.thread:has(> .empty) {
-  background-image: repeating-linear-gradient(
-    to bottom, transparent 0 25px, var(--rule-ghost) 25px 26px);
-  background-origin: content-box;
-  background-clip: content-box;
-  background-position: 0 12px;
+  gap: 14px;
 }
 .thread .empty {
   margin: auto;
   color: var(--ink-faint);
-  font-family: var(--serif);
-  font-style: italic;
-  font-size: 14px;
+  font-family: var(--display);
+  text-transform: lowercase;
+  letter-spacing: 0.1em;
+  font-size: 12px;
   text-align: center;
 }
-/* A turn keeps a book measure: in a narrow column it fills the sheet, in a
-   column expanded to the whole window it stays readable instead of running
-   the full width. */
+/* A turn keeps a book measure: in a column expanded to the whole window it
+   stays readable instead of running the full width. */
 .thread > .msg-user,
 .thread > .msg-assistant {
   width: 100%;
   max-width: 76ch;
   margin-inline: auto;
 }
-/* The call: one prompt, repeated at the head of every voice's answer. */
+/* The call: one prompt, repeated at the head of every voice's answer.
+   It carries the writing bar, because you wrote it. */
 .msg-user {
   align-self: stretch;
   background: var(--sheet-2);
-  border-radius: var(--r);
+  border-left: var(--bar) solid var(--ink);
+  border-radius: 0;
   padding: 8px 11px 9px;
-  font-family: var(--serif);
   font-size: 13px;
   line-height: 1.5;
   white-space: pre-wrap;
@@ -447,25 +476,21 @@ textarea::placeholder { font-style: italic; }
 }
 .turn-label {
   display: block;
-  font-family: var(--sans);
   font-size: 9px;
   font-weight: 600;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--ink-faint);
+  color: var(--ink-soft);
   margin-bottom: 5px;
 }
 /* The response: typeset on plain stock. */
 .msg-assistant {
-  font-family: var(--serif);
-  font-size: 14px;
-  line-height: 1.6;
+  font-size: 13.5px;
+  line-height: 1.62;
   overflow-wrap: break-word;
 }
 .msg-assistant.pending { color: var(--ink-faint); }
 
-/* Per-column wait indicator: three dots pulsing while a stream is dispatched
-   but has yet to return its first token (a slow model, or a queued retry). */
+/* Per-column wait indicator: three solid squares ticking in the persona's
+   colour while a stream is dispatched but has yet to return a token. */
 .typing {
   display: inline-flex;
   gap: 5px;
@@ -473,48 +498,40 @@ textarea::placeholder { font-style: italic; }
   padding: 3px 0;
 }
 .typing-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: color-mix(in oklab, var(--agent, var(--ink-faint)) 55%, var(--rule));
-  animation: typing-bounce 1.2s ease-in-out infinite;
+  width: 7px;
+  height: 7px;
+  background: var(--agent, var(--ink));
+  animation: typing-tick 1.2s steps(1, end) infinite;
+  opacity: 0.25;
 }
-.typing-dot:nth-child(2) { animation-delay: 0.16s; }
-.typing-dot:nth-child(3) { animation-delay: 0.32s; }
-@keyframes typing-bounce {
-  0%, 65%, 100% { opacity: 0.3; transform: translateY(0); }
-  32% { opacity: 1; transform: translateY(-3px); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .typing-dot { animation: typing-fade 1.2s ease-in-out infinite; }
-  @keyframes typing-fade {
-    0%, 65%, 100% { opacity: 0.3; }
-    32% { opacity: 1; }
-  }
+.typing-dot:nth-child(2) { animation-delay: 0.2s; }
+.typing-dot:nth-child(3) { animation-delay: 0.4s; }
+@keyframes typing-tick {
+  0%, 50% { opacity: 1; }
+  50.01%, 100% { opacity: 0.25; }
 }
 
-/* Rendered markdown in assistant replies. Block spacing lives here; the
-   outer bubble no longer relies on white-space: pre-wrap. */
+/* Rendered markdown in assistant replies. */
 .markdown { overflow-wrap: break-word; }
 .markdown > :first-child { margin-top: 0; }
 .markdown > :last-child { margin-bottom: 0; }
 .markdown p { margin: 0 0 9px; }
 .markdown h1, .markdown h2, .markdown h3,
 .markdown h4, .markdown h5, .markdown h6 {
-  margin: 16px 0 6px;
-  line-height: 1.25;
+  font-family: var(--display);
+  margin: 17px 0 6px;
+  line-height: 1.2;
   font-weight: 600;
-  letter-spacing: -0.005em;
+  letter-spacing: -0.015em;
 }
-.markdown h1 { font-size: 1.3em; }
-.markdown h2 { font-size: 1.16em; }
+.markdown h1 { font-size: 1.34em; }
+.markdown h2 { font-size: 1.18em; }
 .markdown h3 { font-size: 1.06em; }
 .markdown h4 { font-size: 1em; }
 .markdown h5, .markdown h6 {
-  font-family: var(--sans);
-  font-size: 0.72em;
+  font-size: 0.74em;
   letter-spacing: 0.12em;
-  text-transform: uppercase;
+  text-transform: lowercase;
   color: var(--ink-soft);
 }
 .markdown ul, .markdown ol { margin: 0 0 9px; padding-left: 22px; }
@@ -523,25 +540,31 @@ textarea::placeholder { font-style: italic; }
 .markdown li > ul, .markdown li > ol { margin: 3px 0; }
 .markdown li.task-list-item { list-style: none; margin-left: -18px; }
 .markdown input[type="checkbox"] { margin: 0 6px 0 0; vertical-align: middle; }
-.markdown a { color: var(--marker); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+.markdown a {
+  color: var(--blue);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
 .markdown strong { font-weight: 600; }
 .markdown code {
   font-family: var(--mono);
-  font-size: 0.79em;
+  font-size: 0.8em;
   background: var(--sheet-2);
-  border: 1px solid var(--rule-faint);
-  border-radius: 2px;
+  border: var(--key) solid var(--rule-faint);
+  border-radius: 0;
   padding: 1px 4px;
 }
 .markdown pre {
   font-family: var(--mono);
   font-size: 11.5px;
   line-height: 1.5;
-  background: var(--sheet-2);
-  border: 1px solid var(--rule-soft);
-  border-radius: var(--r);
-  padding: 9px 11px;
-  margin: 9px 0;
+  background: var(--ink);
+  color: var(--paper);
+  border: none;
+  border-radius: 0;
+  padding: 10px 12px;
+  margin: 10px 0;
   overflow-x: auto;
 }
 .markdown pre code {
@@ -550,90 +573,91 @@ textarea::placeholder { font-style: italic; }
   border-radius: 0;
   padding: 0;
   font-size: inherit;
+  color: inherit;
 }
 .markdown blockquote {
-  margin: 9px 0;
+  margin: 10px 0;
   padding: 1px 0 1px 13px;
-  border-left: 1px solid var(--rule);
+  border-left: var(--bar) solid var(--ink);
   color: var(--ink-soft);
-  font-style: italic;
+  font-style: normal;
 }
-.markdown hr { border: none; border-top: 1px solid var(--rule); margin: 14px 0; }
+.markdown hr { border: none; border-top: var(--bar) solid var(--ink); margin: 15px 0; }
 .markdown table {
   border-collapse: collapse;
   display: block;
   overflow-x: auto;
   max-width: 100%;
-  margin: 9px 0;
+  margin: 10px 0;
   font-size: 12.5px;
 }
 .markdown th, .markdown td {
-  border: 1px solid var(--rule-soft);
+  border: var(--key) solid var(--ink);
   padding: 5px 9px;
   text-align: left;
 }
 .markdown th {
-  background: var(--sheet-2);
-  font-family: var(--sans);
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--display);
   font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--ink-soft);
+  text-transform: lowercase;
 }
-.markdown img { max-width: 100%; border-radius: 2px; }
+.markdown img { max-width: 100%; border-radius: 0; }
 
-/* Diagrams, generated pictures and audio, mounted on the page like plates. */
+/* Diagrams, generated pictures and audio, mounted like plates. */
 .mermaid-block {
   white-space: normal;
   overflow-x: auto;
-  margin: 9px 0;
-  padding: 10px;
-  border: 1px solid var(--rule-soft);
-  border-radius: var(--r);
+  margin: 10px 0;
+  padding: 11px;
+  border: var(--key) solid var(--ink);
+  border-radius: 0;
   background: #fff;
 }
 .mermaid-block svg { max-width: 100%; height: auto; display: block; }
 .fence {
   font-family: var(--mono);
   font-size: 11.5px;
-  background: var(--sheet-2);
-  border: 1px solid var(--rule-soft);
-  border-radius: var(--r);
-  padding: 9px;
-  margin: 9px 0;
+  background: var(--ink);
+  color: var(--paper);
+  border: none;
+  border-radius: 0;
+  padding: 10px 12px;
+  margin: 10px 0;
   overflow-x: auto;
   white-space: pre;
 }
 .gen-img-wrap {
   position: relative;
   display: inline-block;
-  margin: 9px 0;
-  padding: 5px;
+  margin: 10px 0;
+  padding: 0;
   background: #fff;
-  border: 1px solid var(--rule);
-  border-radius: 2px;
-  box-shadow: var(--lift);
+  border: var(--key) solid var(--ink);
+  border-radius: 0;
 }
 .gen-img {
   display: block;
   max-width: 100%;
-  border-radius: 1px;
+  border-radius: 0;
 }
 .gen-img-save {
   position: absolute;
-  top: 11px;
-  right: 11px;
+  top: 8px;
+  right: 8px;
   width: 28px;
   height: 28px;
   padding: 0;
   font-size: 15px;
   line-height: 1;
-  border-radius: 2px;
-  background: color-mix(in srgb, var(--sheet) 88%, transparent);
-  border: 1px solid var(--rule);
+  border-radius: 0;
+  background: var(--sheet);
+  border: var(--key) solid var(--ink);
   opacity: 0;
-  transition: opacity 0.12s ease;
+  transition: opacity 0.09s linear;
 }
 .gen-img-wrap:hover .gen-img-save,
 .gen-img-save:focus-visible {
@@ -642,12 +666,12 @@ textarea::placeholder { font-style: italic; }
 .gen-audio {
   display: block;
   width: 100%;
-  margin: 9px 0;
+  margin: 10px 0;
 }
 .gen-audio-pending {
   font-size: 13px;
   color: var(--ink-soft);
-  margin: 9px 0;
+  margin: 10px 0;
 }
 /* The composer is one sheet: clip, prompt and send share its paper. */
 .input-row {
@@ -655,28 +679,24 @@ textarea::placeholder { font-style: italic; }
   gap: 8px;
   align-items: stretch;
   background: var(--sheet);
-  border: 1px solid var(--rule);
-  border-radius: var(--r);
-  box-shadow: var(--lift);
+  border: var(--frame) solid var(--ink);
+  border-radius: 0;
   padding: 8px;
 }
 .input-row textarea {
   flex: 1;
   height: 64px;
   border-color: transparent;
+  border-left-color: var(--ink);
   background-color: transparent;
-  box-shadow: none;
-  padding-left: 16px;
-  background-position: 9px 0;
+  padding-left: 11px;
 }
-.input-row textarea:hover { border-color: transparent; }
 .input-row textarea:focus {
   border-color: transparent;
+  border-left-color: var(--blue);
   box-shadow: none;
-  background-image:
-    linear-gradient(var(--margin-line), var(--margin-line));
 }
-.input-row button.accent { align-self: stretch; padding: 0 20px; }
+.input-row button.accent { align-self: stretch; padding: 0 22px; }
 
 /* ---------------------------------------------------------- attachments */
 
@@ -687,10 +707,9 @@ textarea::placeholder { font-style: italic; }
   align-items: center;
 }
 .attach-btn {
-  padding: 3px 8px;
-  font-size: 11px;
+  padding: 4px 9px;
+  font-size: 10.5px;
   font-weight: 600;
-  letter-spacing: 0.06em;
   white-space: nowrap;
 }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; }
@@ -699,9 +718,9 @@ textarea::placeholder { font-style: italic; }
   align-items: center;
   gap: 5px;
   max-width: 100%;
-  background: var(--sheet-2);
-  border: 1px solid var(--rule-soft);
-  border-radius: 2px;
+  background: var(--sheet);
+  border: var(--key) solid var(--ink);
+  border-radius: 0;
   padding: 2px 7px;
   font-size: 11.5px;
 }
@@ -714,19 +733,18 @@ textarea::placeholder { font-style: italic; }
 .chip-x {
   border: none;
   background: transparent;
-  box-shadow: none;
   padding: 0 2px;
-  color: var(--ink-faint);
+  color: var(--ink-soft);
   font-size: 10px;
 }
-.chip-x:hover { color: var(--ink); background: transparent; }
+.chip-x:hover { color: #fff; background: var(--red); }
 .msg-user .chips { margin-bottom: 6px; }
-.msg-user .chip { background: var(--sheet); }
 .input-row .attach-btn {
   width: auto;
   align-self: center;
   font-size: 15px;
-  padding: 6px 8px;
+  padding: 6px 9px;
+  letter-spacing: 0;
 }
 
 /* ---------------------------------------------------------------- modal */
@@ -734,37 +752,34 @@ textarea::placeholder { font-style: italic; }
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgb(35 36 43 / 32%);
-  -webkit-backdrop-filter: blur(2px);
-  backdrop-filter: blur(2px);
+  background: rgb(18 18 18 / 45%);
   display: flex;
   align-items: center;
   justify-content: center;
 }
 .modal {
   width: 460px;
-  background: var(--grain) repeat, var(--sheet);
-  border: 1px solid var(--rule);
-  border-radius: 4px;
-  box-shadow: var(--lift-high);
+  background: var(--sheet);
+  border: var(--bar) solid var(--ink);
+  border-radius: 0;
   padding: 22px;
   display: flex;
   flex-direction: column;
   gap: 9px;
 }
 .modal h2 {
-  font-family: var(--serif);
-  font-size: 20px;
+  font-family: var(--display);
+  font-size: 21px;
   font-weight: 600;
+  text-transform: lowercase;
+  letter-spacing: -0.015em;
   margin: 0 0 6px;
   padding-bottom: 11px;
-  border-bottom: 1px solid var(--rule);
+  border-bottom: var(--bar) solid var(--ink);
 }
 .modal label {
   font-size: 9.5px;
   font-weight: 600;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
   color: var(--ink-soft);
   margin-top: 4px;
 }
@@ -775,7 +790,7 @@ textarea::placeholder { font-style: italic; }
   gap: 8px;
   margin-top: 10px;
   padding-top: 14px;
-  border-top: 1px solid var(--rule-faint);
+  border-top: var(--key) solid var(--rule-soft);
 }
 
 /* Selectable-model editor inside the Settings modal. */
@@ -783,8 +798,8 @@ textarea::placeholder { font-style: italic; }
   max-height: 180px;
   overflow-y: auto;
   background: var(--sheet-2);
-  border: 1px solid var(--rule);
-  border-radius: var(--r);
+  border: var(--key) solid var(--ink);
+  border-radius: 0;
   padding: 4px;
   display: flex;
   flex-direction: column;
@@ -795,7 +810,7 @@ textarea::placeholder { font-style: italic; }
   align-items: center;
   gap: 8px;
   padding: 4px 7px;
-  border-radius: 2px;
+  border-radius: 0;
 }
 .model-row:hover { background: var(--sheet); }
 .model-row .model-name {
@@ -814,7 +829,7 @@ textarea::placeholder { font-style: italic; }
   white-space: nowrap;
   max-width: 55%;
 }
-.model-row .chip-x:disabled { color: var(--rule); cursor: default; }
+.model-row .chip-x:disabled { color: var(--rule-soft); cursor: default; background: transparent; }
 .model-add { display: flex; gap: 6px; }
 .model-add input { flex: 1; min-width: 0; }
 .model-add input.mono { font-family: var(--mono); font-size: 11.5px; flex: 1.4; }
@@ -825,17 +840,16 @@ textarea::placeholder { font-style: italic; }
 .menu-anchor { position: relative; }
 .menu {
   position: absolute;
-  top: calc(100% + 5px);
+  top: calc(100% + 4px);
   left: 0;
   min-width: 200px;
   max-width: 340px;
   background: var(--sheet);
-  border: 1px solid var(--rule);
-  border-radius: var(--r);
-  padding: 4px;
+  border: var(--frame) solid var(--ink);
+  border-radius: 0;
+  padding: 3px;
   z-index: 20;
-  box-shadow: var(--lift-high);
-  animation: menu-in 0.12s ease-out;
+  animation: menu-in 0.1s linear;
 }
 @keyframes menu-in {
   from { opacity: 0; transform: translateY(-3px); }
@@ -850,12 +864,12 @@ textarea::placeholder { font-style: italic; }
   text-align: left;
   border-color: transparent;
   background: transparent;
-  box-shadow: none;
   padding: 7px 10px;
-  border-radius: 2px;
+  border-radius: 0;
 }
-.menu button:hover { background: var(--sheet-2); border-color: transparent; }
+.menu button:hover { background: var(--ink); color: var(--sheet); border-color: transparent; }
 .menu .disabled { color: var(--ink-faint); cursor: default; }
+.menu .disabled:hover { background: transparent; color: var(--ink-faint); }
 /* A library row: pick the persona on the left, delete it on the right. */
 .menu-row { display: flex; align-items: center; gap: 2px; }
 .menu-row > button:first-child {
@@ -865,13 +879,13 @@ textarea::placeholder { font-style: italic; }
   align-items: center;
   gap: 9px;
 }
+/* One solid square, the persona's colour. */
 .menu-row .dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
+  width: 9px;
+  height: 9px;
+  border-radius: 0;
   flex: none;
 }
-/* Keep every entry on one line; the menu grows to fit, then ellipses. */
 .menu-row .row-name {
   flex: 1;
   min-width: 0;
@@ -884,17 +898,18 @@ textarea::placeholder { font-style: italic; }
   font-family: var(--mono);
   font-size: 10.5px;
 }
+.menu-row > button:first-child:hover .row-model { color: var(--board-2); }
 .menu-row .row-x {
   width: 26px;
   flex: none;
   text-align: center;
   padding: 7px 0;
-  color: var(--ink-faint);
+  color: var(--ink-soft);
   font-size: 10px;
 }
-.menu-row .row-x:hover { color: var(--ink); }
+.menu-row .row-x:hover { background: var(--red); color: #fff; }
 /* Drop-up variant for anchors near the bottom edge of the window. */
-.menu.up { top: auto; bottom: calc(100% + 5px); }
+.menu.up { top: auto; bottom: calc(100% + 4px); }
 
 /* ---------------------------------------------------------------- toast */
 
@@ -904,13 +919,12 @@ textarea::placeholder { font-style: italic; }
   left: 50%;
   transform: translateX(-50%);
   background: var(--ink);
-  color: var(--sheet);
-  padding: 9px 15px;
-  border-radius: var(--r);
-  box-shadow: var(--lift-high);
+  color: var(--paper);
+  padding: 10px 16px;
+  border-radius: 0;
   font-size: 12.5px;
   z-index: 40;
-  animation: toast-in 0.16s ease-out;
+  animation: toast-in 0.12s linear;
 }
 @keyframes toast-in {
   from { opacity: 0; transform: translate(-50%, 6px); }
@@ -922,13 +936,13 @@ textarea::placeholder { font-style: italic; }
 
 /* ----------------------------------------------------------- scrollbars */
 
-::-webkit-scrollbar { width: 11px; height: 11px; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
-  background: #c9c2b2;
+  background: var(--rule-soft);
   background-clip: content-box;
-  border: 3px solid transparent;
-  border-radius: 8px;
+  border: 2px solid transparent;
+  border-radius: 0;
 }
-::-webkit-scrollbar-thumb:hover { background: #b2ab99; background-clip: content-box; }
+::-webkit-scrollbar-thumb:hover { background: var(--ink); background-clip: content-box; }
 ::-webkit-scrollbar-corner { background: transparent; }

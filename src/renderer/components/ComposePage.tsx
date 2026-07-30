@@ -61,12 +61,10 @@ function AgentCard(props: {
             onChange={(e) => setName(e.target.value)}
             onBlur={saveName}
           />
-          <button
-            title={t('cycle_colour')}
-            style={{ color: accent(agent.hue), width: 34 }}
-            onClick={cycleColor}
-          >
-            ●
+          {/* The control is the swatch: a solid field of the persona's
+              colour, since a glyph in a light pigment would vanish. */}
+          <button className="swatch-btn" title={t('cycle_colour')} onClick={cycleColor}>
+            <span className="swatch" style={{ background: accent(agent.hue) }} />
           </button>
         </div>
         <select

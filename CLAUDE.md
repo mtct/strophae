@@ -9,16 +9,28 @@ Windows, built with **Electron + Bun + React**. One prompt is broadcast in
 parallel to several agents — each with its own name, colour, model and system
 prompt — and every agent answers in its own column, streaming live.
 
-The visual identity is "the chorus notebook": a warm grey paper board, every
-panel a sheet laid on it, each persona owning a coloured spine down the left
-edge of its sheet. Content (replies, prompts, persona names) is set in an
-old-style book serif from the system — Iowan Old Style / Sitka Text /
-Charter / Constantia, so nothing is downloaded — while the chrome stays in
-the system sans with small-caps labelled rules. The rule that carries the
-identity: surfaces you *write* on are manuscript paper (a margin line down
-every textarea, an empty column ruled like a blank sheet), surfaces the
-chorus *prints* on are plain typeset stock. Turns are capped at a 76ch book
-measure, so a column expanded to the whole window still reads as a page.
+The visual identity is **Bauhaus**, shared with the landing page in `docs/`:
+a warm grey board, white sheets laid on it, hard black keylines, and the
+three primaries (blue `#1b34c4`, red `#cb2a17`, yellow `#f0c000`) as solid
+fields. No radii, no shadows, no gradients, no tints — depth comes from
+rules and weight (`--key` 1px for a control, `--frame` 2px for a sheet,
+`--bar` 3px for a structural rule), the way it does in print. Each persona
+owns a fat colour spine down the left edge of its sheet.
+
+Two rules carry it. **What the chorus prints is a plain white sheet; what
+you write on is marked by a solid ink bar down its left edge** (every
+textarea, and the user's own turn in a thread). And **red is the one
+stamped control per screen** — the action that commits it (send, start
+chatting, save), so a screen never shows two; the sidebar's new-session
+button is yellow for exactly this reason.
+
+Chrome (labels, stamped controls, headings, persona names) is set lowercase
+and letterspaced in a geometric sans — Futura / Avenir Next / Century
+Gothic / Bahnschrift, all system faces, since the app downloads nothing —
+after the Bauhaus Dessau habit the lowercase product name already asks for.
+Anything a user or a model wrote keeps its own case and reads in the system
+text sans. Turns are capped at a 76ch measure, so a column expanded to the
+whole window still reads as a page.
 
 ## Stack & commands
 
@@ -63,9 +75,11 @@ src/preload/   preload.ts (contextBridge → window.strophae)
 src/renderer/  React app: App.tsx (state, view routing, toasts) ·
                components/ (Sidebar, ComposePage, ChatPage, SettingsModal) ·
                api.ts (typed preload bridge) · openrouter.ts (SSE streaming) ·
-               theme.ts (oklch pigment accent per hue; a column publishes it
-               as the --agent custom property and styles.css mixes the rest
-               off it) · styles.css · index.html (CSP)
+               theme.ts (oklch poster ink per hue — lightness *follows* the
+               hue, so a yellow prints light and a blue dark instead of
+               every accent flattening to mud; a column publishes it as the
+               --agent custom property, and it is only ever a solid field,
+               never a tint) · styles.css · index.html (CSP)
 scripts/       bundle.ts (Bun.build for main/preload/renderer + static copy)
 tests/         bun test suites for src/shared (audio, models, fences,
                i18n, time) + src/main (store, attachments)
@@ -108,8 +122,10 @@ packaging/     icons + Mac App Store entitlements (electron-builder
 - **Persona library**: `store.seedPersonas()` materialises the Six Thinking
   Hats (`src/shared/personas.ts`) once per document — names/prompts
   translated at seed time in the current language, one palette hue per hat
-  (white and black borrow the nearest readable hue, since accents are
-  fixed-lightness oklch). The `personasSeeded` flag makes it one-shot, so
+  (white and black borrow the nearest readable hue, since an accent is a
+  hue on a wheel rather than a literal colour). The Yellow Hat lands on the
+  real chrome yellow now that `accentLightness` follows the hue.
+  The `personasSeeded` flag makes it one-shot, so
   personas deleted via `persona:delete` never come back. Deleting a persona
   only drops the library entry — agents already created from it keep their
   own copy of the name, prompt and colour. Unlike the frozen session/agent
