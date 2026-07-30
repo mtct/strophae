@@ -9,482 +9,576 @@
 <meta property="og:description" content="A desktop app that sends one prompt to several AI agents at once and streams their answers in parallel columns. Free, open source, local-first.">
 <meta property="og:image" content="https://mtct.github.io/strophae/icon.png">
 <meta property="og:type" content="website">
+<meta name="theme-color" content="#e9e6de">
 <link rel="icon" type="image/png" href="icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600;700&family=Archivo:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script>document.documentElement.className = 'js';</script>
 <style>
-  /* ——— tokens: the app's own visual identity (src/renderer/styles.css + theme.ts) */
+  /* ———————————————————————————————————————————————————————————
+     strophae — the chorus as a Bauhaus stage.
+
+     Three primaries and black on paper board. Kandinsky's form/colour
+     correspondence carries the personas: circle=blue, square=red,
+     triangle=yellow, one shape per voice. Headings, labels and controls
+     are lowercase (Bauhaus Dessau's "wir schreiben alles klein", which
+     the lowercase product name already asks for); running prose keeps
+     sentence case so it stays readable. No radii, no shadows, no
+     gradients: solid planes, hard rules, a modular grid.
+     ——————————————————————————————————————————————————————————— */
   :root {
-    --bg: #f7f7f8;
-    --panel: #ffffff;
-    --border: #e5e5ea;
-    --text: #1a1a20;
-    --muted: #8a8a94;
-    --faint: #c6c6cc;
-    --font: 'Hanken Grotesk', 'Helvetica Neue', 'Segoe UI', system-ui, sans-serif;
+    --paper: #e9e6de;
+    --ink: #121212;
+    --white: #ffffff;
+    --blue: #1b34c4;
+    --red: #cb2a17;
+    --yellow: #f0c000;
+    --muted: #5f5b52;
+    --dim: #c9c5bb;
+
+    --display: 'Jost', 'Futura', 'Century Gothic', system-ui, sans-serif;
+    --body: 'Archivo', 'Helvetica Neue', system-ui, sans-serif;
     --mono: 'IBM Plex Mono', 'Menlo', 'Consolas', monospace;
-    /* per-agent accents — hex fallbacks, exact oklch below */
-    --blue: #3e7bd6;   --blue-head: #fbfcfe;
-    --purple: #a458c0; --purple-head: #fdfbfe;
-    --green: #2c9d64;  --green-head: #fbfdfc;
-  }
-  @supports (color: oklch(0.5 0.1 200)) {
-    :root {
-      --blue: oklch(0.58 0.15 255);   --blue-head: oklch(0.992 0.018 255);
-      --purple: oklch(0.58 0.15 310); --purple-head: oklch(0.992 0.018 310);
-      --green: oklch(0.58 0.15 150);  --green-head: oklch(0.992 0.018 150);
-    }
+
+    --rule: 3px;
+    --spine: 16px;
+    --pad: clamp(20px, 4vw, 44px);
   }
 
   * { box-sizing: border-box; }
   html { scroll-behavior: smooth; }
   body {
     margin: 0;
-    font-family: var(--font);
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--body);
     font-size: 16px;
-    line-height: 1.6;
-    color: var(--text);
-    background: var(--bg);
+    line-height: 1.62;
     -webkit-font-smoothing: antialiased;
   }
   a { color: inherit; }
-  :focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; border-radius: 4px; }
+  img { max-width: 100%; }
+  :focus-visible { outline: var(--rule) solid var(--blue); outline-offset: 3px; }
 
-  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 var(--pad); }
+
+  /* every band of the page carries a coloured spine at the far left,
+     the way every persona owns a spine down its sheet in the app */
+  .page-head, .sec, .page-foot { border-left: var(--spine) solid var(--ink); }
+  .s-red { border-left-color: var(--red); }
+  .s-blue { border-left-color: var(--blue); }
+  .s-yellow { border-left-color: var(--yellow); }
+
+  .sec { padding: clamp(54px, 6.4vw, 86px) 0; }
+
+  /* ——— shapes: one per voice */
+  .mark { display: inline-block; width: 0.8em; height: 0.8em; background: var(--c, var(--ink)); flex: none; }
+  .mark.circle { border-radius: 50%; }
+  .mark.tri { clip-path: polygon(50% 0, 100% 100%, 0 100%); }
+  .c-blue { --c: var(--blue); }
+  .c-red { --c: var(--red); }
+  .c-yellow { --c: var(--yellow); }
+
+  /* ——— type */
+  h1, h2, h3, .label, .btn, .nav-a, .brand { font-family: var(--display); text-transform: lowercase; }
+  h1 {
+    font-size: clamp(3rem, 8.4vw, 6rem); font-weight: 600;
+    line-height: 0.94; letter-spacing: -0.035em; margin: 0;
+  }
+  h1 span { display: block; }
+  h2 {
+    font-size: clamp(2rem, 4.6vw, 3.1rem); font-weight: 600;
+    line-height: 1.02; letter-spacing: -0.028em; margin: 0 0 18px;
+  }
+  h3 { font-size: 1.18rem; font-weight: 600; letter-spacing: -0.012em; margin: 0 0 8px; }
+  .label {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 0.8rem; font-weight: 500; letter-spacing: 0.18em;
+    margin: 0 0 16px;
+  }
+  .lede { font-size: clamp(1.06rem, 1.5vw, 1.2rem); max-width: 34em; margin: 0; }
+  .sec-lede { font-size: clamp(1.02rem, 1.4vw, 1.14rem); color: var(--muted); max-width: 40em; margin: 0 0 44px; }
+
+  /* the rule that opens every section (a pseudo-element, so it can be drawn) */
+  .rule { position: relative; padding-top: 18px; }
+  .rule::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0;
+    height: var(--rule); background: currentColor; transform-origin: left;
+  }
+
+  /* ——— buttons */
+  .btn {
+    display: inline-block; text-decoration: none; font-size: 1rem; font-weight: 600;
+    padding: 13px 26px; border: var(--rule) solid var(--ink); background: transparent; color: var(--ink);
+    transition: background 90ms linear, color 90ms linear, border-color 90ms linear;
+  }
+  .btn:hover { background: var(--ink); color: var(--paper); }
+  .btn-fill { background: var(--red); border-color: var(--red); color: var(--white); }
+  .btn-fill:hover { background: var(--ink); border-color: var(--ink); color: var(--white); }
 
   /* ——— header */
-  header { border-bottom: 1px solid var(--border); background: var(--bg); }
-  .nav { display: flex; align-items: center; gap: 24px; height: 60px; }
-  .brand { display: flex; align-items: center; gap: 10px; font-size: 20px; font-weight: 700; letter-spacing: -0.5px; text-decoration: none; }
-  .brand img { width: 26px; height: 26px; border-radius: 7px; }
-  .nav nav { margin-left: auto; display: flex; align-items: center; gap: 4px; }
-  .nav nav a {
-    text-decoration: none; color: var(--muted); font-size: 14px; font-weight: 500;
-    padding: 6px 12px; border-radius: 8px;
-  }
-  .nav nav a:hover { color: var(--text); background: var(--panel); }
-  .nav nav a.gh {
-    color: #fff; background: var(--text); font-weight: 600; margin-left: 8px;
-  }
-  .nav nav a.gh:hover { background: #33333c; }
+  .page-head { border-bottom: var(--rule) solid var(--ink); }
+  .nav { display: flex; align-items: center; gap: 22px; height: 68px; }
+  .brand { display: flex; align-items: center; gap: 11px; font-size: 1.35rem; font-weight: 600; letter-spacing: -0.03em; text-decoration: none; }
+  .brand img { width: 26px; height: 26px; }
+  .nav-links { margin-left: auto; display: flex; align-items: center; gap: 22px; }
+  .nav-a { text-decoration: none; font-size: 0.94rem; font-weight: 500; color: var(--muted); padding-bottom: 2px; }
+  .nav-a:hover { color: var(--ink); box-shadow: inset 0 -3px 0 var(--red); }
+  .nav-a.gh { color: var(--white); background: var(--ink); font-weight: 600; padding: 9px 18px; }
+  .nav-a.gh:hover { background: var(--blue); box-shadow: none; }
 
   /* ——— hero */
-  .hero { padding: 88px 0 40px; }
-  .eyebrow {
-    font-family: var(--mono); font-size: 12px; letter-spacing: 0.08em;
-    text-transform: uppercase; color: var(--muted); margin: 0 0 20px;
+  .hero-top { display: flex; align-items: center; gap: 20px; padding-bottom: 14px; }
+  .hero-top .label { margin: 0; }
+  .chorus-mark { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+  .chorus-mark .mark { width: 22px; height: 22px; }
+  .hero h1 { margin-top: 26px; }
+  .hero-grid {
+    display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+    gap: 40px; align-items: start; margin-top: 40px;
   }
-  h1 {
-    font-size: clamp(2.5rem, 7vw, 4.3rem);
-    font-weight: 800; letter-spacing: -0.035em; line-height: 1.02;
-    margin: 0 0 22px; max-width: 14em;
-  }
-  h1 .dots { white-space: nowrap; }
-  h1 .dot { display: inline-block; width: 0.42em; height: 0.42em; border-radius: 50%; margin-left: 0.14em; vertical-align: 0.06em; }
-  .hero p.lede { font-size: 19px; color: var(--text); max-width: 36em; margin: 0 0 30px; }
-  .hero p.lede strong { font-weight: 600; }
-  .cta { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
-  .btn {
-    display: inline-block; text-decoration: none; font-size: 15px; font-weight: 600;
-    padding: 11px 20px; border-radius: 10px; border: 1px solid var(--border); background: var(--panel);
-  }
-  .btn:hover { background: var(--bg); }
-  .btn.primary { background: var(--text); color: #fff; border-color: var(--text); }
-  .btn.primary:hover { background: #33333c; }
-  .cta .free { font-size: 13px; color: var(--muted); }
-  .stores { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
+  .cta { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
+  .cta .btn { width: 100%; text-align: center; }
+  .cta .fine { font-size: 0.86rem; color: var(--muted); letter-spacing: 0.01em; }
+  .stores { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 38px; }
   .store {
-    display: inline-flex; align-items: center; gap: 9px;
-    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
-    padding: 8px 14px; font-size: 13.5px; font-weight: 600; color: var(--text);
+    display: inline-flex; align-items: center; gap: 10px;
+    border: var(--rule) solid var(--ink); padding: 9px 9px 9px 15px;
+    font-size: 0.92rem; font-weight: 500;
   }
-  .store svg { width: 15px; height: 15px; flex: none; opacity: 0.85; }
+  .store svg { width: 15px; height: 15px; flex: none; }
   .store em {
-    font-style: normal; font-family: var(--mono); font-size: 10px; letter-spacing: 0.06em;
-    text-transform: uppercase; color: var(--muted);
-    border: 1px solid var(--border); border-radius: 999px; padding: 2px 8px;
+    font-style: normal; font-family: var(--mono); font-size: 0.66rem; letter-spacing: 0.1em;
+    background: var(--yellow); color: var(--ink); padding: 4px 8px;
   }
 
-  /* ——— support */
-  .support .band { text-align: center; }
-  .support .band h2 { margin-bottom: 12px; }
-  .support .band p.lead { font-size: 16px; color: #c3c3cc; max-width: 34em; margin: 0 auto 26px; }
-  .support .btn-row {
-    display: flex; flex-wrap: wrap; gap: 12px; justify-content: center;
-  }
-  .support .heart-btn {
-    display: inline-flex; align-items: center; gap: 9px;
-    background: #fff; color: var(--text); border-radius: 10px;
-    text-decoration: none; font-size: 15px; font-weight: 700; padding: 12px 22px;
-  }
-  .support .heart-btn:hover { background: #ececf1; }
-  .support .heart-btn svg { width: 17px; height: 17px; color: #e0567a; }
-  .support .heart-btn.alt {
-    background: transparent; color: #fff; box-shadow: inset 0 0 0 1px #55555f;
-  }
-  .support .heart-btn.alt:hover { background: #ffffff14; }
-  .support .heart-btn.alt svg { color: #ff5e5b; }
-  .support .note { font-size: 13px; color: #9a9aa6; margin: 18px 0 0; }
-
-  /* ——— the chorus demo (faithful chat-view chrome) */
-  .demo { padding: 34px 0 96px; }
-  .window {
-    background: var(--panel); border: 1px solid var(--border); border-radius: 14px;
-    box-shadow: 0 24px 60px -30px rgba(26,26,32,0.25), 0 2px 8px rgba(26,26,32,0.04);
-    overflow: hidden;
-  }
+  /* ——— the demo: the app, drawn flat */
+  .hero { padding-top: clamp(46px, 5.2vw, 66px); }
+  .demo { margin-top: clamp(44px, 5.6vw, 72px); }
+  .window { border: var(--rule) solid var(--ink); background: var(--white); }
   .titlebar {
-    display: flex; align-items: center; height: 40px; padding: 0 14px;
-    border-bottom: 1px solid var(--border); position: relative;
+    background: var(--ink); color: var(--paper); font-family: var(--mono);
+    font-size: 0.78rem; letter-spacing: 0.06em; padding: 9px 16px;
   }
-  .titlebar .lights { display: flex; gap: 7px; }
-  .titlebar .lights span { width: 11px; height: 11px; border-radius: 50%; background: var(--border); }
-  .titlebar .title {
-    position: absolute; left: 0; right: 0; text-align: center;
-    font-family: var(--mono); font-size: 11.5px; color: var(--muted); pointer-events: none;
-  }
-  .stage { background: var(--bg); padding: 14px; }
-  .columns { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
-  .col {
-    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
-    overflow: hidden; display: flex; flex-direction: column;
-  }
-  .hue-blue   { --accent: var(--blue);   --head: var(--blue-head); }
-  .hue-purple { --accent: var(--purple); --head: var(--purple-head); }
-  .hue-green  { --accent: var(--green);  --head: var(--green-head); }
-  .adot, .dot, .section-mark span { background: var(--accent); }
-  .col .col-body { background: linear-gradient(var(--head), var(--panel) 52px); }
-  .col-head {
-    display: flex; align-items: baseline; gap: 8px; padding: 9px 12px;
-    border-bottom: 1px solid var(--border);
-  }
-  .col-head .adot { width: 7px; height: 7px; border-radius: 50%; flex: none; align-self: center; }
-  .col-head .aname { font-size: 13px; font-weight: 700; }
-  .col-head .amodel { font-family: var(--mono); font-size: 11px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .col-body { padding: 12px; font-size: 13.5px; line-height: 1.55; flex: 1; }
-  .user-pill {
-    display: block; width: fit-content; margin: 0 0 12px auto; max-width: 92%;
-    background: var(--bg); border: 1px solid var(--border); border-radius: 10px;
-    padding: 6px 10px; font-size: 12.5px; color: var(--text);
-  }
-  .answer { min-height: 10.5em; color: var(--text); }
-  .answer .caret { display: inline-block; width: 0.55em; height: 1em; vertical-align: -0.12em; border-radius: 1px; animation: blink 1s steps(1) infinite; }
+  .stage { padding: 14px; background: var(--paper); }
+  .columns { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+  .col { background: var(--white); border: var(--rule) solid var(--ink); border-left-width: 12px; border-left-color: var(--c); display: flex; flex-direction: column; }
+  .col-head { display: flex; align-items: center; gap: 9px; padding: 10px 13px; border-bottom: var(--rule) solid var(--ink); }
+  .col-head .mark { width: 12px; height: 12px; }
+  .aname { font-family: var(--display); font-size: 0.94rem; font-weight: 600; }
+  .amodel { font-family: var(--mono); font-size: 0.7rem; color: var(--muted); margin-left: auto; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .col-body { padding: 13px; font-size: 0.86rem; line-height: 1.55; flex: 1; }
+  .user-pill { display: block; width: fit-content; max-width: 94%; margin: 0 0 12px auto; background: var(--paper); padding: 6px 10px; font-size: 0.8rem; }
+  .answer { min-height: 11em; margin: 0; }
+  .answer .caret { display: inline-block; width: 0.5em; height: 1em; vertical-align: -0.14em; animation: blink 1s steps(1) infinite; }
   @keyframes blink { 50% { opacity: 0; } }
-  .promptbar { display: flex; gap: 10px; align-items: stretch; margin-top: 12px; }
-  .promptbar .clip { align-self: center; color: var(--faint); flex: none; }
-  .promptbar .box {
-    flex: 1; background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
-    padding: 10px 12px; font-size: 13.5px; color: var(--text); display: flex; align-items: center;
-  }
+  .promptbar { display: flex; gap: 14px; margin-top: 14px; }
+  .promptbar .box { flex: 1; background: var(--white); border: var(--rule) solid var(--ink); padding: 12px 14px; font-size: 0.9rem; }
   .promptbar .send {
-    background: var(--text); color: #fff; border-radius: 10px; font-size: 13.5px;
-    font-weight: 600; display: flex; align-items: center; padding: 0 22px;
+    background: var(--red); color: var(--white); font-family: var(--display); font-weight: 600;
+    text-transform: lowercase; display: flex; align-items: center; padding: 0 30px; font-size: 0.95rem;
   }
-  .demo-caption { text-align: center; font-size: 13.5px; color: var(--muted); margin: 18px 0 0; }
+  .demo-caption { font-family: var(--mono); font-size: 0.76rem; letter-spacing: 0.06em; color: var(--muted); margin: 14px 0 0; }
 
-  /* ——— sections */
-  section { padding: 88px 0; }
-  section + section { border-top: 1px solid var(--border); }
-  .section-mark { display: flex; gap: 5px; margin-bottom: 18px; }
-  .section-mark span { width: 8px; height: 8px; border-radius: 50%; }
-  h2 { font-size: clamp(1.7rem, 3.5vw, 2.3rem); font-weight: 800; letter-spacing: -0.025em; line-height: 1.1; margin: 0 0 14px; }
-  .section-lede { font-size: 17px; color: var(--muted); max-width: 40em; margin: 0 0 40px; }
-
-  /* features */
-  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
-  .card {
-    background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
-    padding: 22px 22px 24px;
+  /* ——— features: a modular grid, ruled like a table */
+  .grid {
+    display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+    border-top: var(--rule) solid var(--ink); border-left: var(--rule) solid var(--ink);
   }
-  .card h3 { font-size: 16px; font-weight: 700; margin: 0 0 8px; letter-spacing: -0.01em; }
-  .card p { font-size: 14.5px; color: var(--muted); margin: 0; }
-  .card .tag {
-    font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.07em; text-transform: uppercase;
-    color: var(--muted); display: block; margin-bottom: 14px;
-  }
+  .cell { border-right: var(--rule) solid var(--ink); border-bottom: var(--rule) solid var(--ink); padding: 26px 24px 30px; }
+  .cell .mark { width: 16px; height: 16px; }
+  .cell p { color: var(--muted); font-size: 0.95rem; margin: 0; }
 
-  /* screenshots — the window shadow is baked into the transparent PNG/WebP */
-  .shots { display: grid; gap: 56px; }
-  .shot { margin: 0; }
-  .shot a { display: block; text-decoration: none; }
+  /* ——— screenshots */
+  .shot { margin: 0 0 clamp(52px, 7vw, 84px); }
+  .shot:last-child { margin-bottom: 0; }
+  .shot-head { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 32px; align-items: baseline; margin-bottom: 22px; }
+  .shot-head p { margin: 0; color: var(--muted); font-size: 0.98rem; }
+  .shot a { display: block; border: var(--rule) solid var(--ink); background: var(--white); }
   .shot img { display: block; width: 100%; height: auto; }
-  .shot a:hover img { opacity: 0.94; }
-  .shot figcaption { font-size: 14.5px; color: var(--muted); max-width: 44em; margin: -8px auto 0; text-align: center; }
-  .shot figcaption b { color: var(--text); font-weight: 600; }
-  .shot .cap-tag {
-    font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.07em; text-transform: uppercase;
-    color: var(--muted); display: block; margin-bottom: 8px;
+
+  /* ——— full-bleed colour planes */
+  .plane-blue { background: var(--blue); color: var(--white); }
+  .plane-ink { background: var(--ink); color: var(--paper); }
+  .plane-yellow { background: var(--yellow); color: var(--ink); }
+
+  /* name aside */
+  /* Jost carries no Greek, so this one word falls back to a system grotesque:
+     set it heavier and tighter so the swap reads as a decision, not an accident */
+  .greek {
+    font-family: var(--display); font-weight: 500;
+    font-size: clamp(3rem, 9.4vw, 7rem); line-height: 1; letter-spacing: 0.02em;
+    margin: 0 0 26px; padding-bottom: 26px; border-bottom: var(--rule) solid currentColor;
   }
+  .aside-text { font-size: clamp(1.1rem, 1.8vw, 1.4rem); max-width: 26em; margin: 0; line-height: 1.45; }
+  .aside-text b { font-weight: 600; }
 
-  /* chorus aside */
-  .chorus { text-align: center; }
-  .chorus .greek {
-    font-family: var(--mono); font-size: clamp(1.6rem, 4vw, 2.4rem); letter-spacing: 0.18em;
-    color: var(--muted); margin: 0 0 18px;
-  }
-  .chorus p { max-width: 34em; margin: 0 auto; font-size: 17px; color: var(--text); }
-  .chorus p em { color: var(--muted); }
+  /* privacy facts */
+  .facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; margin-top: 44px; }
+  .fact { padding: 0 30px; border-left: var(--rule) solid currentColor; }
+  .fact:first-child { padding-left: 0; border-left: 0; }
+  .fact p { margin: 0; font-size: 0.95rem; color: var(--dim); }
+  .fact code { font-family: var(--mono); font-size: 0.86rem; color: var(--yellow); }
 
-  /* privacy band */
-  .band { background: var(--text); color: #fff; border-radius: 16px; padding: 52px 48px; }
-  .band h2 { color: #fff; }
-  .band .facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; margin-top: 34px; }
-  .band .facts h3 { font-size: 15px; font-weight: 700; margin: 0 0 6px; }
-  .band .facts p { font-size: 14px; color: #b9b9c2; margin: 0; }
-  .band .facts code { font-family: var(--mono); font-size: 12.5px; color: #d9d9e0; }
-
-  /* run from source */
-  .source .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: start; }
+  /* run it */
+  .grid2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 44px; align-items: start; }
+  .grid2 p { margin: 0 0 16px; color: var(--muted); font-size: 1rem; }
+  .grid2 p b { color: var(--ink); font-weight: 600; }
+  .grid2 code { font-family: var(--mono); font-size: 0.88rem; color: var(--ink); }
   pre.term {
-    background: var(--text); color: #e9e9ee; border-radius: 12px; padding: 22px 24px;
-    font-family: var(--mono); font-size: 13.5px; line-height: 1.9; overflow-x: auto; margin: 0;
+    background: var(--ink); color: var(--white); padding: 26px 28px; margin: 0;
+    font-family: var(--mono); font-size: 0.86rem; line-height: 2; overflow-x: auto;
   }
-  pre.term .c { color: #8a8a94; }
-  .source p { font-size: 15px; color: var(--muted); margin: 0 0 14px; }
-  .source p code { font-family: var(--mono); font-size: 13px; color: var(--text); background: var(--panel); border: 1px solid var(--border); border-radius: 5px; padding: 1px 5px; }
+  pre.term .c { color: var(--yellow); }
 
-  /* footer */
-  footer { border-top: 1px solid var(--border); padding: 36px 0 48px; }
-  .foot { display: flex; flex-wrap: wrap; gap: 10px 28px; align-items: center; font-size: 13.5px; color: var(--muted); }
-  .foot .brand { font-size: 15px; }
-  .foot a { color: var(--muted); }
-  .foot a:hover { color: var(--text); }
+  /* support */
+  .support-grid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 40px; align-items: end; }
+  .plane-yellow .btn { border-color: var(--ink); }
+  .plane-yellow .btn:hover { background: var(--ink); color: var(--yellow); }
+  .plane-yellow .btn-fill { background: var(--ink); color: var(--yellow); }
+  .plane-yellow .btn-fill:hover { background: var(--red); border-color: var(--red); color: var(--white); }
+  .give { display: flex; flex-wrap: wrap; gap: 12px; }
+  .note { font-size: 0.9rem; margin: 20px 0 0; }
+
+  /* ——— footer */
+  .page-foot { border-top: var(--rule) solid var(--ink); padding: 34px 0 44px; }
+  .foot { display: flex; flex-wrap: wrap; gap: 12px 26px; align-items: center; font-size: 0.9rem; color: var(--muted); }
+  .foot .brand { font-size: 1.05rem; color: var(--ink); }
+  .foot a { color: var(--muted); text-decoration: none; box-shadow: inset 0 -1px 0 var(--muted); }
+  .foot a:hover { color: var(--ink); box-shadow: inset 0 -3px 0 var(--red); }
   .foot .spacer { flex: 1; }
-  .foot img { border-radius: 5px; }
+  .foot .mono { font-family: var(--mono); font-size: 0.76rem; letter-spacing: 0.06em; }
+
+  /* ———————————————————————————————————————————————————————————
+     Motion: one idea only — the page is *constructed*. Rules draw
+     themselves left to right, shapes snap into place, the headline is
+     laid down like ink under a press. Running text never moves.
+     ——————————————————————————————————————————————————————————— */
+  @media (prefers-reduced-motion: no-preference) {
+    /* on scroll: each section's rule draws, then its mark lands */
+    .js .sec:not(.hero) .rule::before {
+      transform: scaleX(0);
+      transition: transform 560ms cubic-bezier(0.16, 0.8, 0.24, 1);
+    }
+    .js .sec:not(.hero) .rule.in::before { transform: scaleX(1); }
+    .js .sec:not(.hero) .rule .mark {
+      transform: scale(0) rotate(-90deg);
+      transition: transform 320ms cubic-bezier(0.2, 1.5, 0.5, 1) 240ms;
+    }
+    .js .sec:not(.hero) .rule.in .mark { transform: scale(1) rotate(0deg); }
+
+    /* on load: the hero prints itself */
+    .hero .rule::before { animation: draw 520ms cubic-bezier(0.16, 0.8, 0.24, 1) both; }
+    .hero h1 span { animation: ink 620ms cubic-bezier(0.16, 0.8, 0.24, 1) both; }
+    .hero h1 span:nth-child(1) { animation-delay: 190ms; }
+    .hero h1 span:nth-child(2) { animation-delay: 300ms; }
+    .hero-grid, .stores { animation: settle 440ms ease-out both 600ms; }
+
+    /* the chorus mark then turns as one, once every twelve seconds — στροφή.
+       A full turn, never a partial one, so the shapes always come to rest
+       exactly as they started; the circle, invariant under rotation, beats
+       on the same count instead. */
+    .chorus-mark .mark {
+      animation: snap 280ms cubic-bezier(0.2, 1.6, 0.5, 1) both,
+                 turn 12s cubic-bezier(0.7, 0, 0.3, 1) 3.4s infinite;
+    }
+    .chorus-mark .mark.circle { animation-name: snap, beat; }
+    .chorus-mark .mark:nth-child(1) { animation-delay: 500ms, 3.4s; }
+    .chorus-mark .mark:nth-child(2) { animation-delay: 570ms, 3.4s; }
+    .chorus-mark .mark:nth-child(3) { animation-delay: 640ms, 3.4s; }
+
+    /* a persona's shape works while its model does: it stops when the
+       answer lands, so the mark is the column's own progress indicator */
+    .col-head .mark.busy { animation: spin 1.8s linear infinite; }
+    .col-head .mark.busy.circle { animation: pulse 1.8s ease-in-out infinite; }
+
+    /* hover: the cell lifts off the board and its mark turns onto itself —
+       a quarter for the square, a third for the triangle, neither of which
+       changes where it lands */
+    .cell { transition: background 120ms linear; }
+    .cell:hover { background: var(--white); }
+    .cell .mark { transition: transform 280ms cubic-bezier(0.3, 0.9, 0.2, 1); }
+    .cell:hover .mark { transform: scale(1.3) rotate(90deg); }
+    .cell:hover .mark.tri { transform: scale(1.3) rotate(120deg); }
+    .cell:hover .mark.circle { transform: scale(1.3); }
+    .nav-a { transition: color 90ms linear, box-shadow 90ms linear; }
+  }
+  @keyframes draw { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+  @keyframes ink {
+    from { clip-path: inset(0 100% -25% 0); }
+    to { clip-path: inset(0 -6% -25% 0); }
+  }
+  @keyframes snap { from { transform: scale(0); } to { transform: scale(1); } }
+  /* held gestures — the ambient chorus mark waits, then turns */
+  @keyframes turn { 0%, 82% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+  @keyframes beat {
+    0%, 82% { transform: scale(1); }
+    91% { transform: scale(0.7); }
+    100% { transform: scale(1); }
+  }
+  /* continuous ones — a column's mark while its model is still answering */
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(0.72); } }
+  @keyframes settle {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: none; }
+  }
 
   /* ——— responsive */
-  @media (max-width: 860px) {
-    .columns, .grid, .band .facts, .source .grid2 { grid-template-columns: 1fr; }
+  @media (max-width: 900px) {
+    :root { --spine: 10px; --rule: 2px; }
+    .columns, .grid, .facts, .grid2, .hero-grid, .shot-head, .support-grid { grid-template-columns: minmax(0, 1fr); }
+    .hero-grid, .support-grid { gap: 28px; }
+    .cta { align-items: stretch; }
+    .cta .btn { width: auto; }
     .answer { min-height: 0; }
-    .band { padding: 36px 26px; }
-    .hero { padding-top: 56px; }
-    section { padding: 64px 0; }
-    .nav nav a:not(.gh) { display: none; }
+    .fact { padding: 0 0 0 18px; border-left-width: 2px; }
+    .fact + .fact { margin-top: 26px; }
+    .facts { gap: 0; }
+    .nav-links .nav-a:not(.gh) { display: none; }
+    .shot-head { gap: 14px; }
+    .label { font-size: 0.74rem; letter-spacing: 0.12em; }
   }
   @media (prefers-reduced-motion: reduce) {
     html { scroll-behavior: auto; }
     .answer .caret { display: none; }
+    .btn { transition: none; }
   }
 </style>
 </head>
 <body>
 
-<header>
+<header class="page-head">
   <div class="wrap nav">
     <a class="brand" href="#"><img src="icon.png" alt="" width="26" height="26">strophae</a>
-    <nav>
-      <a href="#features">Features</a>
-      <a href="#screenshots">Screenshots</a>
-      <a href="#privacy">Privacy</a>
-      <a href="#source">Run it</a>
-      <a href="#support">Support</a>
-      <a class="gh" href="https://github.com/mtct/strophae">GitHub</a>
-    </nav>
+    <div class="nav-links">
+      <a class="nav-a" href="#features">features</a>
+      <a class="nav-a" href="#screenshots">screenshots</a>
+      <a class="nav-a" href="#privacy">privacy</a>
+      <a class="nav-a" href="#source">run it</a>
+      <a class="nav-a" href="#support">support</a>
+      <a class="nav-a gh" href="https://github.com/mtct/strophae">github</a>
+    </div>
   </div>
 </header>
 
 <main>
-  <div class="wrap hero">
-    <p class="eyebrow">Free &amp; open source · macOS &amp; Windows</p>
-    <h1>One prompt, many <span class="dots">minds<span class="dot hue-blue"></span><span class="dot hue-purple"></span><span class="dot hue-green"></span></span></h1>
-    <p class="lede">strophae is a desktop app that broadcasts a single prompt to a
-    <strong>council of AI agents</strong> — each with its own name, model, colour and
-    system prompt — and streams every answer live, side by side. Same question,
-    different minds, one screen.</p>
-    <div class="cta">
-      <a class="btn primary" href="https://github.com/mtct/strophae">Get strophae on GitHub</a>
-      <a class="btn" href="#source">Run from source</a>
-      <span class="free">MIT licensed · your OpenRouter key, your data</span>
-    </div>
-    <div class="stores" aria-label="App store availability">
-      <span class="store">
-        <svg viewBox="0 0 384 512" fill="currentColor" aria-hidden="true"><path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/></svg>
-        Mac App Store <em>Coming soon</em>
-      </span>
-      <span class="store">
-        <svg viewBox="0 0 448 512" fill="currentColor" aria-hidden="true"><path d="M0 93.7l183.6-25.3v177.4H0V93.7zm0 324.6l183.6 25.3V268.4H0v149.9zm203.8 28L448 480V268.4H203.8v177.9zm0-380.6v180.1H448V32L203.8 65.7z"/></svg>
-        Microsoft Store <em>Coming soon</em>
-      </span>
-    </div>
-  </div>
-
-  <div class="wrap demo" id="demo">
-    <div class="window" aria-label="strophae chat view: three agents answering the same prompt in parallel">
-      <div class="titlebar">
-        <div class="lights" aria-hidden="true"><span></span><span></span><span></span></div>
-        <div class="title">strophae — Rust rewrite council</div>
-      </div>
-      <div class="stage">
-        <div class="columns">
-          <div class="col hue-blue">
-            <div class="col-head">
-              <span class="adot"></span>
-              <span class="aname">Pragmatist</span>
-              <span class="amodel">GPT-4o</span>
-            </div>
-            <div class="col-body">
-              <span class="user-pill">Should we rewrite it in Rust?</span>
-              <p class="answer" data-answer="Not all of it. Profile first — if the hot path is the parser, rewrite the parser. A full rewrite trades two years of accumulated bug fixes for a feeling of safety you could get module by module."></p>
-            </div>
-          </div>
-          <div class="col hue-purple">
-            <div class="col-head">
-              <span class="adot"></span>
-              <span class="aname">Devil's advocate</span>
-              <span class="amodel">Claude Opus 4.1</span>
-            </div>
-            <div class="col-body">
-              <span class="user-pill">Should we rewrite it in Rust?</span>
-              <p class="answer" data-answer="Wrong question. Nobody opened an issue about speed — the tracker is full of onboarding friction. A rewrite is the most expensive way to procrastinate on the problems users actually have."></p>
-            </div>
-          </div>
-          <div class="col hue-green">
-            <div class="col-head">
-              <span class="adot"></span>
-              <span class="aname">Enthusiast</span>
-              <span class="amodel">Gemini 2.5 Pro</span>
-            </div>
-            <div class="col-body">
-              <span class="user-pill">Should we rewrite it in Rust?</span>
-              <p class="answer" data-answer="Yes — start with the CLI. Small surface, real wins: a single static binary, instant startup, and the team learns the borrow checker on low-stakes code before touching the core."></p>
-            </div>
-          </div>
-        </div>
-        <div class="promptbar" aria-hidden="true">
-          <svg class="clip" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.5l-8.5 8.5a6 6 0 01-8.5-8.5L12.5 4a4 4 0 015.7 5.7L9.7 18.2a2 2 0 01-2.8-2.8L15 7.3"/></svg>
-          <div class="box">Should we rewrite it in Rust?</div>
-          <div class="send">Send</div>
-        </div>
-      </div>
-    </div>
-    <p class="demo-caption">The chat view: one send fans out to every agent, every column streams at once.</p>
-  </div>
-
-  <section id="features">
+  <section class="sec s-red hero">
     <div class="wrap">
-      <div class="section-mark" aria-hidden="true"><span class="hue-blue"></span><span class="hue-purple"></span><span class="hue-green"></span></div>
-      <h2>Compose your council</h2>
-      <p class="section-lede">Stop retyping the same question into four chat tabs.
-      Give each seat at the table a voice, then ask once.</p>
+      <div class="hero-top">
+        <p class="label">free &amp; open source · macos + windows</p>
+        <div class="chorus-mark" aria-hidden="true">
+          <span class="mark circle c-blue"></span>
+          <span class="mark c-red"></span>
+          <span class="mark tri c-yellow"></span>
+        </div>
+      </div>
+      <div class="rule"></div>
+      <h1><span>one prompt,</span><span>many minds</span></h1>
+
+      <div class="hero-grid">
+        <div>
+          <p class="lede">strophae is a desktop app for macOS and Windows. You write the
+          prompt once. Every agent in your council answers it at the same time, each with
+          its own model, system prompt and colour, streaming live in its own column.</p>
+        </div>
+        <div class="cta">
+          <a class="btn btn-fill" href="https://github.com/mtct/strophae">get it on github</a>
+          <a class="btn" href="#source">run from source</a>
+          <span class="fine">MIT licensed. Your OpenRouter key, your data, on your machine.</span>
+        </div>
+      </div>
+
+      <div class="stores" aria-label="App store availability">
+        <span class="store">
+          <svg viewBox="0 0 384 512" fill="currentColor" aria-hidden="true"><path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/></svg>
+          mac app store <em>coming soon</em>
+        </span>
+        <span class="store">
+          <svg viewBox="0 0 448 512" fill="currentColor" aria-hidden="true"><path d="M0 93.7l183.6-25.3v177.4H0V93.7zm0 324.6l183.6 25.3V268.4H0v149.9zm203.8 28L448 480V268.4H203.8v177.9zm0-380.6v180.1H448V32L203.8 65.7z"/></svg>
+          microsoft store <em>coming soon</em>
+        </span>
+      </div>
+
+      <div class="demo" id="demo">
+        <div class="window" aria-label="strophae chat view: three agents answering the same prompt in parallel">
+          <div class="titlebar">strophae — rust rewrite council</div>
+          <div class="stage">
+            <div class="columns">
+              <div class="col c-red">
+                <div class="col-head">
+                  <span class="mark"></span>
+                  <span class="aname">Pragmatist</span>
+                  <span class="amodel">gpt-4o</span>
+                </div>
+                <div class="col-body">
+                  <span class="user-pill">Should we rewrite it in Rust?</span>
+                  <p class="answer" data-answer="Not all of it. Profile first: if the hot path is the parser, rewrite the parser. A full rewrite trades two years of accumulated bug fixes for a feeling of safety you could get module by module."></p>
+                </div>
+              </div>
+              <div class="col c-yellow">
+                <div class="col-head">
+                  <span class="mark tri"></span>
+                  <span class="aname">Devil's advocate</span>
+                  <span class="amodel">claude opus 4.1</span>
+                </div>
+                <div class="col-body">
+                  <span class="user-pill">Should we rewrite it in Rust?</span>
+                  <p class="answer" data-answer="Wrong question. Nobody opened an issue about speed. The tracker is full of onboarding friction, and a rewrite is the most expensive way to procrastinate on the problems users actually have."></p>
+                </div>
+              </div>
+              <div class="col c-blue">
+                <div class="col-head">
+                  <span class="mark circle"></span>
+                  <span class="aname">Enthusiast</span>
+                  <span class="amodel">gemini 2.5 pro</span>
+                </div>
+                <div class="col-body">
+                  <span class="user-pill">Should we rewrite it in Rust?</span>
+                  <p class="answer" data-answer="Yes, and start with the CLI. Small surface, real wins: a single static binary, instant startup, and the team learns the borrow checker on low-stakes code before touching the core."></p>
+                </div>
+              </div>
+            </div>
+            <div class="promptbar" aria-hidden="true">
+              <div class="box">Should we rewrite it in Rust?</div>
+              <div class="send">send</div>
+            </div>
+          </div>
+        </div>
+        <p class="demo-caption">one send · three models · three columns filling at once</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec s-blue" id="features">
+    <div class="wrap">
+      <div class="rule">
+        <p class="label"><span class="mark c-blue"></span>features</p>
+      </div>
+      <h2>compose your council</h2>
+      <p class="sec-lede">Four browser tabs and the same question pasted four times is not
+      a workflow. Give every seat at the table a voice, then ask once.</p>
       <div class="grid">
-        <div class="card">
-          <span class="tag">Streaming</span>
-          <h3>Every agent answers at once</h3>
-          <p>One send fans out to the whole council in parallel. Tokens arrive live in each column — compare answers as they form, not after.</p>
+        <div class="cell">
+          <p class="label"><span class="mark circle c-blue"></span>streaming</p>
+          <h3>every agent answers at once</h3>
+          <p>One send fans out to the whole council. Tokens arrive live in each column, so you compare answers as they form.</p>
         </div>
-        <div class="card">
-          <span class="tag">Personas</span>
-          <h3>Agents with a point of view</h3>
-          <p>Name, colour, model and system prompt per agent. Save the good ones as personas and seat them again in the next session.</p>
+        <div class="cell">
+          <p class="label"><span class="mark c-red"></span>personas</p>
+          <h3>agents with a point of view</h3>
+          <p>Name, colour, model and system prompt per agent. Save the good ones as personas and seat them again next session.</p>
         </div>
-        <div class="card">
-          <span class="tag">Models</span>
-          <h3>Any model, one key</h3>
-          <p>Powered by OpenRouter: GPT, Claude, Gemini, Llama, DeepSeek, Mistral and hundreds more. The model list is yours to edit in Settings.</p>
+        <div class="cell">
+          <p class="label"><span class="mark tri c-yellow"></span>models</p>
+          <h3>any model, one key</h3>
+          <p>OpenRouter carries GPT, Claude, Gemini, Llama, DeepSeek, Mistral and hundreds more. The model list is yours to edit in Settings.</p>
         </div>
-        <div class="card">
-          <span class="tag">Attachments</span>
-          <h3>Bring your documents</h3>
-          <p>Attach PDF, Word, Markdown, CSV or images — to the shared context every agent sees, to a single agent's brief, or to one message.</p>
+        <div class="cell">
+          <p class="label"><span class="mark c-red"></span>attachments</p>
+          <h3>bring your documents</h3>
+          <p>PDF, Word, Markdown, CSV and images attach to the shared context, to a single agent's brief, or to one message.</p>
         </div>
-        <div class="card">
-          <span class="tag">Rich replies</span>
-          <h3>Beyond plain text</h3>
-          <p>Mermaid code fences render as real diagrams inside the column, and image models stream pictures straight into the conversation.</p>
+        <div class="cell">
+          <p class="label"><span class="mark tri c-yellow"></span>rich replies</p>
+          <h3>beyond plain text</h3>
+          <p>Mermaid fences render as real diagrams inside the column. Image models paint into the conversation, audio models speak.</p>
         </div>
-        <div class="card">
-          <span class="tag">i18n</span>
-          <h3>In your language</h3>
-          <p>The interface speaks English and Italian, following your OS. Your words and the models' replies are never translated behind your back.</p>
+        <div class="cell">
+          <p class="label"><span class="mark circle c-blue"></span>languages</p>
+          <h3>in your language</h3>
+          <p>The interface speaks English and Italian and follows your OS. Your words and the models' replies are never translated behind your back.</p>
         </div>
       </div>
     </div>
   </section>
 
-  <section id="screenshots">
+  <section class="sec s-yellow" id="screenshots">
     <div class="wrap">
-      <div class="section-mark" aria-hidden="true"><span class="hue-blue"></span><span class="hue-purple"></span><span class="hue-green"></span></div>
-      <h2>The council, at work</h2>
-      <p class="section-lede">Two real sessions, captured as they came out of the app —
-      one prompt typed once, every column answering it at the same time.</p>
-      <div class="shots">
-        <figure class="shot">
-          <a href="shot-image-agents.webp" title="Open full size">
-            <img src="shot-image-agents.webp" width="2400" height="1372" loading="lazy" decoding="async"
-                 alt="strophae showing three image agents — Raffaello, Monet and Rembrandt, all on Gemini 2.5 Flash Image — each painting the same prompt about a deserted beach in a storm, side by side in three columns.">
-          </a>
-          <figcaption>
-            <span class="cap-tag">Image agents</span>
-            <b>Three painters, one storm.</b> Give each agent an image model and its own
-            brief: the same prompt comes back as three different canvases, streamed into
-            their columns and kept with the session — one button saves any of them to disk.
-          </figcaption>
-        </figure>
-        <figure class="shot">
-          <a href="shot-six-hats.webp" title="Open full size">
-            <img src="shot-six-hats.webp" width="2400" height="1372" loading="lazy" decoding="async"
-                 alt="strophae showing the Six Thinking Hats personas — Red, Black, Yellow, Green and Blue Hat — answering a question about rewriting a Django backend in Rust, each in its own colour-coded column with markdown-formatted replies.">
-          </a>
-          <figcaption>
-            <span class="cap-tag">Six Thinking Hats</span>
-            <b>One decision, six angles.</b> The bundled persona library seats de Bono's
-            hats around your question — emotion, judgment, benefit, ideas, planning —
-            and every answer lands as formatted markdown you can read side by side.
-          </figcaption>
-        </figure>
+      <div class="rule">
+        <p class="label"><span class="mark tri c-yellow"></span>screenshots</p>
       </div>
+      <h2>the council at work</h2>
+      <p class="sec-lede">Two real sessions, captured straight out of the app.</p>
+
+      <figure class="shot">
+        <div class="shot-head">
+          <h3>three painters, one storm</h3>
+          <p>Give each agent an image model and its own brief. The same prompt comes back
+          as three different canvases, streamed into their columns and kept with the
+          session. One button saves any of them to disk.</p>
+        </div>
+        <a href="shot-image-agents.webp" title="Open full size">
+          <img src="shot-image-agents.webp" width="2980" height="1852" loading="lazy" decoding="async"
+               alt="strophae showing three image agents — Raffaello, Monet and Rembrandt, all on Gemini 2.5 Flash Image — each painting the same prompt about a deserted beach in a storm, side by side in three columns.">
+        </a>
+      </figure>
+
+      <figure class="shot">
+        <div class="shot-head">
+          <h3>one decision, six angles</h3>
+          <p>The bundled persona library seats de Bono's Six Thinking Hats around your
+          question: facts, emotion, judgment, benefit. Every answer lands as formatted
+          markdown, tables and all, that you can read side by side.</p>
+        </div>
+        <a href="shot-six-hats.webp" title="Open full size">
+          <img src="shot-six-hats.webp" width="2980" height="1852" loading="lazy" decoding="async"
+               alt="strophae showing the Six Thinking Hats personas — White, Red, Black and Yellow Hat — answering whether to convert a services layer to Rust, each in its own colour-spined column with markdown-formatted replies, one of them a table of knowns and unknowns.">
+        </a>
+      </figure>
     </div>
   </section>
 
-  <section class="chorus" aria-label="Why the name strophae">
+  <section class="sec s-yellow plane-blue" aria-label="Why the name strophae">
     <div class="wrap">
       <p class="greek" aria-hidden="true">στροφή</p>
-      <p>In Greek drama the chorus turned as one and answered the scene in
-      <em>strophes</em> — many voices, one line to answer. <strong>strophae</strong> is
-      that chorus for your questions: several minds, turning together.</p>
+      <p class="aside-text">In Greek drama the chorus turned as one and answered the scene
+      in <em>strophes</em>. Many voices, one line to answer. <b>strophae</b> is that
+      chorus for your questions.</p>
     </div>
   </section>
 
-  <section id="privacy">
+  <section class="sec s-red plane-ink" id="privacy">
     <div class="wrap">
-      <div class="band">
-        <h2>No accounts. No server. No telemetry.</h2>
-        <div class="facts">
-          <div>
-            <h3>Local by design</h3>
-            <p>Sessions, agents and attachments live in a single JSON document in your user folder. Delete the folder, and strophae never knew you.</p>
-          </div>
-          <div>
-            <h3>Your key, in the keychain</h3>
-            <p>The OpenRouter API key is encrypted at rest with the OS keychain (<code>safeStorage</code>) and is only ever sent to OpenRouter.</p>
-          </div>
-          <div>
-            <h3>One outbound host</h3>
-            <p>The renderer's Content-Security-Policy allows exactly one network destination: <code>openrouter.ai</code>. Nothing else leaves the app.</p>
-          </div>
+      <div class="rule">
+        <p class="label"><span class="mark c-red"></span>privacy</p>
+      </div>
+      <h2>no accounts. no server. no telemetry.</h2>
+      <div class="facts">
+        <div class="fact">
+          <h3>local by design</h3>
+          <p>Sessions, agents and attachments live in a single JSON document in your user folder. Delete the folder and strophae never knew you.</p>
+        </div>
+        <div class="fact">
+          <h3>your key, in the keychain</h3>
+          <p>The OpenRouter API key is encrypted at rest with the OS keychain (<code>safeStorage</code>) and is only ever sent to OpenRouter.</p>
+        </div>
+        <div class="fact">
+          <h3>one outbound host</h3>
+          <p>The renderer's Content-Security-Policy allows exactly one network destination: <code>openrouter.ai</code>. Nothing else leaves the app.</p>
         </div>
       </div>
     </div>
   </section>
 
-  <section id="source" class="source">
+  <section class="sec s-red" id="source">
     <div class="wrap">
-      <div class="section-mark" aria-hidden="true"><span class="hue-blue"></span><span class="hue-purple"></span><span class="hue-green"></span></div>
-      <h2>Run it in a minute</h2>
+      <div class="rule">
+        <p class="label"><span class="mark c-red"></span>run it</p>
+      </div>
+      <h2>running in a minute</h2>
       <div class="grid2">
         <div>
-          <p>strophae is built with <strong>Electron, Bun and React</strong>. All you
-          need is <a href="https://bun.sh">Bun</a> — clone, install, start.</p>
-          <p>To talk to real models, open <strong>Settings</strong> and paste an
-          OpenRouter key (<code>sk-or-…</code>, from
-          <a href="https://openrouter.ai/keys">openrouter.ai/keys</a>).</p>
-          <p>Packaged desktop builds — macOS dmg and Windows zip — come from CI
-          today, and <strong>Mac App Store and Microsoft Store releases are on the
-          way</strong>. See
+          <p>strophae is built with <b>Electron, Bun and React</b>. All you need is
+          <a href="https://bun.sh">Bun</a>: clone, install, start.</p>
+          <p>To talk to real models, open <b>Settings</b> and paste an OpenRouter key
+          (<code>sk-or-…</code>, from <a href="https://openrouter.ai/keys">openrouter.ai/keys</a>).</p>
+          <p>Packaged builds for macOS and Windows come out of CI today. Mac App Store and
+          Microsoft Store releases are on the way, documented in
           <a href="https://github.com/mtct/strophae/blob/main/PACKAGING.md">PACKAGING.md</a>.</p>
         </div>
-        <pre class="term"><span class="c"># macOS · Windows · needs bun.sh</span>
+        <pre class="term"><span class="c"># macos · windows · needs bun.sh</span>
 git clone https://github.com/mtct/strophae
 cd strophae
 bun install
@@ -493,42 +587,59 @@ bun run start</pre>
     </div>
   </section>
 
-  <section id="support" class="support">
+  <section class="sec s-blue plane-yellow" id="support">
     <div class="wrap">
-      <div class="band">
-        <h2>Keep the chorus singing</h2>
-        <p class="lead">strophae is free, MIT-licensed and built by one person in
-        the open. If it saves you a stack of chat tabs, a small donation helps
-        keep the columns streaming — and the store releases coming.</p>
-        <div class="btn-row">
-          <a class="heart-btn" href="https://github.com/sponsors/mtct">
-            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-            Sponsor on GitHub
-          </a>
-          <a class="heart-btn alt" href="https://ko-fi.com/mtct">
-            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 4h13a4 4 0 0 1 0 8h-1.1a5 5 0 0 1-4.9 4H8a5 5 0 0 1-5-5V5a1 1 0 0 1 1-1zm12 6h1a2 2 0 0 0 0-4h-1v4zM3 19h15a1 1 0 0 1 0 2H3a1 1 0 0 1 0-2z"/></svg>
-            Buy me a coffee on Ko-fi
-          </a>
+      <div class="rule">
+        <p class="label"><span class="mark circle c-blue"></span>support</p>
+      </div>
+      <div class="support-grid">
+        <div>
+          <h2>keep the chorus singing</h2>
+          <p class="lede">strophae is free, MIT licensed and built by one person in the
+          open. If it saves you a stack of chat tabs, a donation keeps the columns
+          streaming and the store releases coming.</p>
         </div>
-        <p class="note">Every contribution goes straight into strophae's development.</p>
+        <div>
+          <div class="give">
+            <a class="btn btn-fill" href="https://ko-fi.com/mtct">buy me a coffee</a>
+            <a class="btn" href="https://github.com/sponsors/mtct">sponsor on github</a>
+          </div>
+          <p class="note">Ko-fi takes one-off tips, GitHub Sponsors does monthly. Starring
+          the repo and filing a good bug report are free and help just as much.</p>
+        </div>
       </div>
     </div>
   </section>
 </main>
 
-<footer>
+<footer class="page-foot">
   <div class="wrap foot">
     <span class="brand"><img src="icon.png" alt="" width="20" height="20">strophae</span>
     <span>MIT License · Matteo Costa</span>
     <span class="spacer"></span>
-    <a href="https://github.com/sponsors/mtct">Sponsor</a>
-    <a href="https://ko-fi.com/mtct">Ko-fi</a>
-    <a href="https://github.com/mtct/strophae">Source on GitHub</a>
-    <span>Electron + Bun + React</span>
+    <a href="https://ko-fi.com/mtct">ko-fi</a>
+    <a href="https://github.com/sponsors/mtct">sponsor</a>
+    <a href="https://github.com/mtct/strophae">source</a>
+    <span class="mono">electron · bun · react</span>
   </div>
 </footer>
 
 <script>
+  // Draw each section's rule (and land its mark) the first time it scrolls in.
+  (function () {
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (!('IntersectionObserver' in window)) return;
+    var rules = document.querySelectorAll('.sec:not(.hero) .rule');
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (!e.isIntersecting) return;
+        e.target.classList.add('in');
+        io.unobserve(e.target);
+      });
+    }, { threshold: 0.35, rootMargin: '0px 0px -8% 0px' });
+    Array.prototype.forEach.call(rules, function (el) { io.observe(el); });
+  })();
+
   // The chorus demo: stream each column's answer word by word, in parallel,
   // like tokens arriving from three different models. Loops while visible.
   (function () {
@@ -542,9 +653,12 @@ bun run start</pre>
     function clearTimers() { timers.forEach(clearTimeout); timers = []; }
     function stream(el, done) {
       var words = el.dataset.answer.match(/\S+\s*/g) || [];
+      var col = el.closest('.col');
+      var mark = col && col.querySelector('.col-head .mark');
+      if (mark) mark.classList.add('busy');
       var caret = document.createElement('span');
       caret.className = 'caret';
-      caret.style.background = 'var(--accent)';
+      caret.style.background = 'var(--c)';
       var textNode = document.createTextNode('');
       el.textContent = '';
       el.appendChild(textNode);
@@ -557,6 +671,7 @@ bun run start</pre>
           timers.push(setTimeout(tick, 40 + Math.random() * 110));
         } else {
           caret.remove();
+          if (mark) mark.classList.remove('busy');
           done();
         }
       })();
@@ -574,8 +689,14 @@ bun run start</pre>
       });
     }
     new IntersectionObserver(function (entries) {
-      visible = entries[0].isIntersecting;
-      if (visible) { run(); } else { clearTimers(); running = false; }
+      // a batch can carry several changes for the same target: the last wins
+      visible = entries[entries.length - 1].isIntersecting;
+      if (visible) { run(); return; }
+      clearTimers();
+      running = false;
+      document.querySelectorAll('.col-head .mark.busy').forEach(function (m) {
+        m.classList.remove('busy');
+      });
     }, { threshold: 0.25 }).observe(document.querySelector('.window'));
   })();
 </script>

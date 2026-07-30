@@ -41,8 +41,23 @@ submissions, no local certificate needed.
 
 ## Icons
 
-`packaging/icon.{icns,ico,png}` — the mark is the ink tile, three agent dots
-and the wordmark's "s". `icon.png` is the master: edit it and regenerate the
-platform formats from it (`iconutil` on macOS for `.icns`, any ICO encoder
-for `.ico`), or point electron-builder at a 1024×1024 PNG and let it derive
-both.
+`packaging/icon.{icns,ico,png}` — the mark is the app's own screen drawn flat:
+a paper sheet inside a black keyline, one ink bar (the prompt) over three
+columns in the Bauhaus primaries (the voices answering it), matching the
+landing page.
+
+`icon.png` is the 1024×1024 master and is **flush to the canvas**, which is
+what Windows and the web want. The `.icns` is *not* generated from it directly:
+macOS since Big Sur expects the rounded square to sit on Apple's grid — 824 of
+1024, so roughly 10% empty on each side — or the app looks oversized next to
+its neighbours in the Dock. Draw the mac variant with that inset, then:
+
+```bash
+mkdir icon.iconset   # icon_16x16.png … icon_512x512@2x.png, drawn at each size
+iconutil -c icns icon.iconset -o packaging/icon.icns
+```
+
+`.ico` is a PNG-compressed multi-size icon (16/24/32/48/64/128/256), flush like
+the master; any ICO encoder produces one. Alternatively point electron-builder
+at the 1024×1024 PNG and let it derive both formats, accepting the flush
+silhouette on macOS.

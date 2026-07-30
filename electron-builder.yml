@@ -42,5 +42,5 @@ appx:
   identityName: REPLACE.WITH.IDENTITY.NAME
   publisher: CN=REPLACE-WITH-PUBLISHER-GUID
   publisherDisplayName: REPLACE WITH PUBLISHER DISPLAY NAME
-  backgroundColor: '#1a1a20'
+  backgroundColor: '#121212'
   languages: [en-US, it-IT]
