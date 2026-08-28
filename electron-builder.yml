@@ -6,6 +6,10 @@
 #   bunx electron-builder --win appx # Microsoft Store .appx (fill the
 #                                    # identity placeholders from Partner
 #                                    # Center first)
+#
+# One architecture per platform, on purpose: macOS Apple Silicon (arm64) and
+# Windows x64. The names are version-less so the landing page can link to
+# https://github.com/mtct/strophae/releases/latest/download/<file> forever.
 
 appId: app.strophae.desktop
 productName: Strophae
@@ -26,16 +30,42 @@ npmRebuild: false
 mac:
   category: public.app-category.productivity
   icon: packaging/icon.icns
-  target: [zip, dmg]
+  artifactName: ${productName}-macos-arm64.${ext}
+  target:
+    - target: dmg
+      arch: [arm64]
+    - target: zip
+      arch: [arm64]
 
 mas:
   entitlements: packaging/entitlements.mas.plist
   entitlementsInherit: packaging/entitlements.mas.inherit.plist
   hardenedRuntime: false
+  artifactName: ${productName}-${version}-mas.${ext}
 
 win:
   icon: packaging/icon.ico
-  target: [zip]
+  artifactName: ${productName}-windows-x64.${ext}
+  target:
+    - target: nsis
+      arch: [x64]
+    - target: zip
+      arch: [x64]
+
+# Per-user install (%LOCALAPPDATA%\Programs) — no UAC prompt, which keeps an
+# unsigned build to a single SmartScreen warning instead of two hurdles.
+# User data (strophae.json, the encrypted key) survives an uninstall.
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Strophae
+  installerIcon: packaging/icon.ico
+  uninstallerIcon: packaging/icon.ico
+  installerHeaderIcon: packaging/icon.ico
+  artifactName: ${productName}-windows-x64-setup.${ext}
 
 appx:
   # Fill from Partner Center > Product management > Product identity.

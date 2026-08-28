@@ -181,11 +181,22 @@ packaging/     icons + Mac App Store entitlements (electron-builder
 
 ## Packaging & stores
 
-`electron-builder.yml`: mac (zip+dmg), `mas` target with sandbox
-entitlements in `packaging/` (App Sandbox + JIT + network client), win zip,
-`appx` target for the Microsoft Store (identity placeholders to fill from
-Partner Center). `PACKAGING.md` documents both store flows; CI
-(`.github/workflows/desktop.yml`) builds both platforms with Bun. All npm
+`electron-builder.yml`: mac arm64 (zip+dmg), `mas` target with sandbox
+entitlements in `packaging/` (App Sandbox + JIT + network client), win x64
+`nsis` installer (per-user, no UAC) + zip, `appx` target for the Microsoft
+Store (identity placeholders to fill from Partner Center). Windows
+cross-builds from macOS — electron-builder 26 has a native rcedit, so wine
+is not needed. **One arch per platform, pinned in the config** (Apple
+Silicon, Windows x64), with version-less artifact names
+(`Strophae-macos-arm64.dmg`, `Strophae-windows-x64-setup.exe`) so
+`releases/latest/download/<file>` is a permanent link — that is what the
+download section of `docs/index.html` and the README table point at. CI
+(`.github/workflows/desktop.yml`) builds both platforms with Bun on a manual
+run or a `v*` tag, and a tag also publishes the binaries as the GitHub
+release; the mac leg passes `-c.mac.identity=-` to **ad-hoc sign** the app,
+since arm64 macOS will not launch an entirely unsigned binary and CI has no
+Developer ID (a flag, not a config key, so the `mas` build still demands a
+real certificate). `PACKAGING.md` documents both store flows. All npm
 packages are devDependencies — the runtime bundle is `dist/` only, so
 electron-builder packages no node_modules.
 
