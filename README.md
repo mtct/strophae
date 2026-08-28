@@ -18,6 +18,20 @@ ever sent to OpenRouter. All data lives locally in your user data folder.
 
 → [Project page](https://mtct.github.io/strophae/)
 
+## Download
+
+| | |
+| --- | --- |
+| **macOS** (Apple Silicon) | [Strophae-macos-arm64.dmg](https://github.com/mtct/strophae/releases/latest/download/Strophae-macos-arm64.dmg) · [.zip](https://github.com/mtct/strophae/releases/latest/download/Strophae-macos-arm64.zip) |
+| **Windows** (x64) | [Strophae-windows-x64-setup.exe](https://github.com/mtct/strophae/releases/latest/download/Strophae-windows-x64-setup.exe) · [.zip](https://github.com/mtct/strophae/releases/latest/download/Strophae-windows-x64.zip) |
+
+Both come out of [CI](.github/workflows/desktop.yml) on every version tag; all
+of them are on the [releases page](https://github.com/mtct/strophae/releases).
+Neither is signed with a paid certificate, so the first launch takes one extra
+step: on macOS right-click the app → **Open** (or `xattr -dr
+com.apple.quarantine /Applications/Strophae.app`), on Windows click **More
+info** → **Run anyway**.
+
 ## Run from source
 
 ```bash
@@ -61,11 +75,11 @@ the OS keychain.
 
 ## Distribution
 
-CI ([Desktop builds](.github/workflows/desktop.yml)) packages macOS
-(dmg+zip) and Windows (zip) on every manual run or `v*` tag. Store
-submission — **Mac App Store** (sandbox entitlements ready) and
-**Microsoft Store** (appx target) — is documented in
-[PACKAGING.md](PACKAGING.md).
+CI ([Desktop builds](.github/workflows/desktop.yml)) packages macOS arm64
+(dmg+zip) and Windows x64 (setup.exe + zip) on every manual run or `v*` tag,
+and a `v*` tag publishes them as a GitHub release. Store submission —
+**Mac App Store** (sandbox entitlements ready) and **Microsoft Store** (appx
+target) — is documented in [PACKAGING.md](PACKAGING.md).
 
 ## Contributing
 
