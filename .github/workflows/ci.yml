@@ -51,7 +51,8 @@ jobs:
       - name: Bundle
         run: bun run build
 
+      # The runner never exports ELECTRON_RUN_AS_NODE, so there is nothing to
+      # neutralise — and an empty value is not neutral everywhere anyway (see
+      # the note in desktop.yml).
       - name: Boot the app and walk compose → chat
         run: bunx electron . --check
-        env:
-          ELECTRON_RUN_AS_NODE: ''

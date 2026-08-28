@@ -52,8 +52,12 @@ the renderer CSP in `src/renderer/index.html`).
   build: `bunx electron-builder --dir`.
 - **Environment gotcha**: this workspace (VSCode extension host) exports
   `ELECTRON_RUN_AS_NODE=1`, which turns the Electron binary into plain
-  Node. Launch with `env -u ELECTRON_RUN_AS_NODE …` in terminals here (the
-  `check` npm script and CI set it empty explicitly).
+  Node. Launch with `env -u ELECTRON_RUN_AS_NODE …` in terminals here; the
+  `check` npm script sets it empty instead, which unsets it on macOS only.
+  **CI never sets it at all**: Electron reads the variable with `getenv_s`
+  on Windows, where an empty value still reports a size, so an empty
+  `ELECTRON_RUN_AS_NODE` there boots the app as bare Node and it dies on a
+  missing V8 snapshot.
 - **Bun gotcha**: `Bun.build` inlines `__dirname` to the *source* dir —
   main-process paths must go through `app.getAppPath()` (see
   `src/main/main.ts`).

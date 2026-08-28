@@ -61,10 +61,12 @@ jobs:
       - name: Bundle
         run: bun run build
 
+      # No ELECTRON_RUN_AS_NODE override here: the runners never export it (only
+      # the VSCode dev workspace does), and setting it to an empty string is not
+      # neutral on Windows — Electron tests the variable with getenv_s, where an
+      # empty value still reports a size, so the app would boot as bare Node.
       - name: Smoke-test the app
         run: bunx electron . --check
-        env:
-          ELECTRON_RUN_AS_NODE: ''
 
       - name: Package
         run: ${{ matrix.package }}
