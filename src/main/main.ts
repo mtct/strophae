@@ -103,10 +103,14 @@ app.whenReady().then(() => {
         store.flush();
         app.exit(ok ? 0 : 1);
       });
+    // Only a guard against a renderer that never reports: the walk itself
+    // runs in a few seconds here, but it now drives streams and a CI runner
+    // is a good deal slower, so leave it room rather than failing a green
+    // build on the clock.
     setTimeout(() => {
       console.log('self-test: FAIL (renderer never reported ready)');
       app.exit(1);
-    }, 15000);
+    }, 30000);
   } else {
     ipcMain.handle('check:ready', () => undefined);
   }

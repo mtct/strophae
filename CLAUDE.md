@@ -208,8 +208,9 @@ packaging/     icons + Mac App Store entitlements (electron-builder
   materialised once in the current language at creation and then frozen.
 - **--check mode** (`main.ts` + `App.tsx` `runSelfTest`): loads the app
   offscreen with `?check=1`, renderer walks the screens and reports
-  `{check: bool}` via `check:ready`; `check:shot` captures PNGs. 15s
-  timeout guards a hung renderer. The walk seeds its own content — a
+  `{check: bool}` via `check:ready`; `check:shot` captures PNGs. A 30s
+  timeout guards a hung renderer (the walk itself takes a few seconds; the
+  slack is for CI runners). The walk seeds its own content — a
   persisted exchange for the quote checks, then a *fake SSE stream*
   (`globalThis.fetch` stubbed in the renderer, no network) plus a throwaway
   key for the stop checks. Check mode also keeps that key in memory rather
