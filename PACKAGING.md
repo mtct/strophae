@@ -29,7 +29,7 @@ Cutting a release is a tag away — bump `version` in `package.json` first, sinc
 it names the app, not the files:
 
 ```bash
-git tag v0.1.0 && git push origin v0.1.0
+git tag v0.2.0 && git push origin v0.2.0
 ```
 
 Both platforms cross-build from macOS — electron-builder 26 patches the
