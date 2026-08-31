@@ -125,6 +125,115 @@ export function App() {
     await new Promise((r) => setTimeout(r, 150));
     report['column restores'] =
       document.querySelector('.sidebar') !== null;
+    // Quoting a passage across the council. Seed one exchange first: both
+    // calls are plain persistence, so the self-test still reaches no model.
+    const reply = 'Start with the smallest thing that could work.';
+    const sent = await api.sendMessage(draft.id, 'What should we build?');
+    for (const slotId of Object.values(sent.slotIds)) {
+      await api.finalizeMessage(slotId, reply);
+    }
+    await reload();
+    await new Promise((r) => setTimeout(r, 200));
+    const passage = document.querySelector('.agent-column .msg-assistant');
+    const selection = window.getSelection();
+    if (passage && selection) {
+      const range = document.createRange();
+      range.selectNodeContents(passage);
+      selection.removeAllRanges();
+      selection.addRange(range);
+      document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+    }
+    await new Promise((r) => setTimeout(r, 150));
+    report['quote control follows a selection'] =
+      document.querySelector('.quote-pop') !== null;
+    await api.checkShot('chat-quote');
+    document.querySelector<HTMLButtonElement>('.quote-pop button')?.click();
+    await new Promise((r) => setTimeout(r, 150));
+    const prompt = document.querySelector<HTMLTextAreaElement>(
+      '.input-row textarea');
+    // The passage lands in the shared prompt, attributed and marked, ready
+    // for one Send to put it to every agent.
+    report['passage quoted into the prompt'] =
+      (prompt?.value ?? '').includes(`> ${reply}`)
+      && document.querySelector('.quote-pop') === null;
+    await api.checkShot('chat-quoted');
+    // Your own call, repeated at the head of every column, quotes as
+    // yours — and its "You" label stays behind as the chrome it is.
+    const ownTurn = document.querySelector('.agent-column .msg-user');
+    if (ownTurn && selection) {
+      const range = document.createRange();
+      range.selectNodeContents(ownTurn);
+      selection.removeAllRanges();
+      selection.addRange(range);
+      document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+    }
+    await new Promise((r) => setTimeout(r, 150));
+    document.querySelector<HTMLButtonElement>('.quote-pop button')?.click();
+    await new Promise((r) => setTimeout(r, 150));
+    // The label as the column renders it, so the check reads the same in
+    // either language (runSelfTest captured `t` before the state loaded).
+    const youLabel =
+      document.querySelector('.agent-column .turn-label')?.textContent ?? '';
+    report['your own turn quotes as yours'] = youLabel !== ''
+      && (prompt?.value ?? '').includes(
+        `> ${youLabel}:\n> What should we build?`);
+    // Stopping a reply. This needs a live stream, so the walk feeds the
+    // renderer a fake one — an endless SSE body that dies when the request
+    // is aborted, exactly like a real one — behind a throwaway key (check
+    // mode keeps it in memory, never in the keychain: see ipc.ts).
+    {
+      await api.setApiKey('check-key');
+      const realFetch = globalThis.fetch;
+      globalThis.fetch = ((_url: string, init: RequestInit) => {
+        const signal = init.signal!;
+        const body = new ReadableStream<Uint8Array>({
+          start(c) {
+            signal.addEventListener('abort', () =>
+              c.error(new DOMException('aborted', 'AbortError')));
+          },
+          async pull(c) {
+            await new Promise((r) => setTimeout(r, 120));
+            try {
+              c.enqueue(new TextEncoder().encode(
+                'data: {"choices":[{"delta":{"content":"and on it goes "}}]}'
+                + '\n'));
+            } catch { /* stopped: the stream is already errored */ }
+          },
+        });
+        return Promise.resolve(new Response(body, { status: 200 }));
+      }) as unknown as typeof fetch;
+
+      const accent = document.querySelector<HTMLButtonElement>(
+        '.input-row button.accent');
+      const sendLabel = accent?.textContent ?? '';
+      accent?.click(); // the quoted passage above is the prompt
+      await new Promise((r) => setTimeout(r, 700));
+      const speaking = document.querySelectorAll('.col-header .stop-btn');
+      // Every voice offers its own stop, and the composer's stamped control
+      // has turned into the one that stops them all.
+      report['stop control while a voice speaks'] = speaking.length >= 2
+        && (accent?.textContent ?? '') !== sendLabel;
+      await api.checkShot('chat-streaming');
+      (speaking[0] as HTMLButtonElement).click();
+      await new Promise((r) => setTimeout(r, 400));
+      report['one voice stops, the others carry on'] =
+        document.querySelectorAll('.col-header .stop-btn').length
+          === speaking.length - 1;
+      await api.checkShot('chat-stopped-one');
+      document.querySelector<HTMLButtonElement>(
+        '.input-row button.accent')?.click();
+      await new Promise((r) => setTimeout(r, 600));
+      report['stopping all ends the run'] =
+        document.querySelectorAll('.col-header .stop-btn').length === 0
+        && (document.querySelector('.input-row button.accent')?.textContent
+          ?? '') === sendLabel;
+      // What each voice managed to say is kept, not thrown away.
+      report['a stopped reply keeps what it printed'] =
+        Array.from(document.querySelectorAll('.msg-assistant'))
+          .some((el) => (el.textContent ?? '').includes('and on it goes'));
+      globalThis.fetch = realFetch;
+      await api.setApiKey('');
+    }
     // Settings modal: the model list must show the seeded defaults.
     setSettingsOpen(true);
     await new Promise((r) => setTimeout(r, 250));

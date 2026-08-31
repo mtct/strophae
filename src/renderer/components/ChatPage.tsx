@@ -3,6 +3,7 @@ import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { pcm16ToWav } from '../../shared/audio';
 import { splitFences } from '../../shared/fences';
 import { modelSlug } from '../../shared/models';
+import { appendQuote, quotePassage } from '../../shared/quote';
 import type {
   Agent, Attachment, Conversation, Message, ModelEntry,
 } from '../../shared/types';
@@ -26,6 +27,17 @@ import { MermaidBlock } from './Mermaid';
 type LiveText = Record<number, string>;
 /** Generated images per slot id, as data: URLs, while streaming. */
 type LiveImages = Record<number, string[]>;
+/** A passage selected inside one column: whose it is, and where the quote
+    control should hang (above the selection when it sits near the foot of
+    the window, below it otherwise). */
+interface Picked {
+  agentId: number;
+  mine: boolean;
+  text: string;
+  x: number;
+  y: number;
+  up: boolean;
+}
 
 /** Assistant text rendered as markdown, with ```mermaid blocks split out
     and drawn as diagrams. */
@@ -47,19 +59,25 @@ function AgentColumn(props: {
   liveImages: LiveImages;
   liveAudio: Set<number>;
   streamingIds: Set<number>;
+  streaming: boolean;
   hidden: boolean;
   expanded: boolean;
   onToggleExpand: () => void;
+  onStop: () => void;
   onClear: () => void;
   onToast: (msg: string) => void;
 }) {
   const { t, agent } = props;
   const [menuOpen, setMenuOpen] = useState(false);
   const threadRef = useRef<HTMLDivElement>(null);
+  // Follow the stream only while the reader sits at the foot of the column:
+  // scrolled up to lift a passage out of an older turn, the view has to
+  // stay where it was put.
+  const stick = useRef(true);
 
   useEffect(() => {
     const el = threadRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
+    if (el && stick.current) el.scrollTop = el.scrollHeight;
   });
 
   const textOf = (m: Message): string =>
@@ -77,12 +95,24 @@ function AgentColumn(props: {
   return (
     <section
       className={`agent-column${props.hidden ? ' hidden' : ''}`}
+      // Which voice a selection inside this column belongs to.
+      data-agent={agent.id}
       // The spine colour, plus everything styles.css mixes from it.
       style={{ '--agent': accent(agent.hue) } as CSSProperties}
     >
       <header className="col-header">
         <span className="name">{agent.name}</span>
         <span className="model">{agent.model}</span>
+        {props.streaming && (
+          <button
+            className="ghost stop-btn"
+            title={t('stop_generation')}
+            aria-label={t('stop_generation')}
+            onClick={props.onStop}
+          >
+            <span className="stop-mark" />
+          </button>
+        )}
         <button
           className="ghost expand-btn"
           title={t(props.expanded ? 'restore_chat' : 'expand_chat')}
@@ -107,7 +137,15 @@ function AgentColumn(props: {
           )}
         </div>
       </header>
-      <div className="thread" ref={threadRef}>
+      <div
+        className="thread"
+        ref={threadRef}
+        onScroll={(e) => {
+          const el = e.currentTarget;
+          stick.current =
+            el.scrollHeight - el.scrollTop - el.clientHeight < 40;
+        }}
+      >
         {visible.length === 0 && (
           <div className="empty">{t('waiting')}</div>
         )}
@@ -230,13 +268,114 @@ export function ChatPage(props: {
   const [liveAudio, setLiveAudio] = useState<Set<number>>(new Set());
   const [streamingIds, setStreamingIds] = useState<Set<number>>(new Set());
   const [expandedId, setExpandedId] = useState<number | null>(null);
+  // A passage the reader has selected inside one column, and where to hang
+  // the control that lifts it into the shared prompt.
+  const [picked, setPicked] = useState<Picked | null>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const popRef = useRef<HTMLDivElement>(null);
+  // One live stream per agent, so a voice can be cut short on its own —
+  // or all of them at once from the composer.
+  const stoppers = useRef(new Map<number, AbortController>());
 
   // A removed agent (or a switched conversation) cannot stay expanded.
   const expanded = conv.agents.some((a) => a.id === expandedId)
     ? expandedId
     : null;
 
-  useEffect(() => setExpandedId(null), [conv.id]);
+  useEffect(() => {
+    setExpandedId(null);
+    setPicked(null);
+  }, [conv.id]);
+
+  // The composer grows with a quoted passage rather than hiding it in a
+  // one-line slot — up to a third of the window, then it scrolls.
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = '0px';
+    el.style.height = `${Math.min(Math.max(el.scrollHeight + 2, 64), 260)}px`;
+  }, [input]);
+
+  // Selecting inside a column offers that passage to the whole council: the
+  // control hangs under the selection and writes it into the shared prompt,
+  // where one Send puts it to every agent at once.
+  useEffect(() => {
+    const readSelection = () => {
+      const sel = window.getSelection();
+      const text = sel?.toString() ?? '';
+      if (!sel || sel.rangeCount === 0 || !text.trim()) return setPicked(null);
+      const range = sel.getRangeAt(0);
+      const node = range.commonAncestorContainer;
+      const el = node instanceof Element ? node : node.parentElement;
+      const column = el?.closest<HTMLElement>('.agent-column');
+      // One voice at a time: a selection dragged across two columns has no
+      // single speaker to attribute, so it offers nothing.
+      if (!column || !el?.closest('.thread')) return setPicked(null);
+      const rect = range.getBoundingClientRect();
+      // Hang it under the selection, or above when the foot of the column
+      // is too close — the control belongs over the sheet, not the
+      // composer below it.
+      const up = rect.bottom + 46 > column.getBoundingClientRect().bottom;
+      setPicked({
+        agentId: Number(column.dataset.agent),
+        // Your own call repeats at the head of every column: quoted, it
+        // stays yours instead of becoming something the agent said.
+        mine: el.closest('.msg-user') !== null,
+        text,
+        x: Math.min(Math.max(rect.left + rect.width / 2, 90),
+          window.innerWidth - 90),
+        y: up ? rect.top - 8 : rect.bottom + 8,
+        up,
+      });
+    };
+    const onSettled = () => setTimeout(readSelection, 0);
+    const onDown = (e: MouseEvent) => {
+      // Pressing the control itself must not count as dismissing it.
+      if (!popRef.current?.contains(e.target as Node)) setPicked(null);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setPicked(null);
+      else onSettled();
+    };
+    // A scrolled column would leave the control pointing at nothing.
+    const onScroll = () => setPicked(null);
+    document.addEventListener('mouseup', onSettled);
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keyup', onKey);
+    document.addEventListener('scroll', onScroll, true);
+    return () => {
+      document.removeEventListener('mouseup', onSettled);
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keyup', onKey);
+      document.removeEventListener('scroll', onScroll, true);
+    };
+  }, []);
+
+  const pickedAgent = picked
+    ? conv.agents.find((a) => a.id === picked.agentId)
+    : undefined;
+
+  /** Cut every voice short at once. Each stream resolves with whatever
+      already arrived, so partial replies are kept, not thrown away. */
+  function stopAll() {
+    for (const stopper of stoppers.current.values()) stopper.abort();
+  }
+
+  /** Write the selected passage into the shared prompt, attributed, and
+      leave the caret under it for the question that follows. */
+  function liftPassage(speaker: string, text: string) {
+    setInput((prev) => appendQuote(prev, quotePassage(speaker, text)));
+    setPicked(null);
+    window.getSelection()?.removeAllRanges();
+    props.onToast(t('passage_quoted'));
+    setTimeout(() => {
+      const el = inputRef.current;
+      if (!el) return;
+      el.focus();
+      el.setSelectionRange(el.value.length, el.value.length);
+      el.scrollTop = el.scrollHeight;
+    }, 0);
+  }
 
   // The sidebar hides while a column fills the window; make sure it
   // comes back when the value changes or this page unmounts.
@@ -266,6 +405,13 @@ export function ChatPage(props: {
       return;
     }
     setSending(true);
+    // Register a stopper per agent before the first await: a stop pressed
+    // in the gap between Send and the first token still has to land, and an
+    // already-aborted signal makes streamAgent return without asking.
+    stoppers.current.clear();
+    for (const agent of conv.agents) {
+      stoppers.current.set(agent.id, new AbortController());
+    }
     setInput('');
     const sentAtts = attached;
     setAttached([]);
@@ -302,6 +448,8 @@ export function ChatPage(props: {
     // columns start together (only the models' own latency staggers them).
     for (const { agent, slotId, payload, buildError } of jobs) {
       const slug = modelSlug(agent.model, props.models);
+      const stopper = stoppers.current.get(agent.id) ?? new AbortController();
+      stoppers.current.set(agent.id, stopper);
       const images: string[] = [];
       const audioChunks: string[] = [];
       let acc = '';
@@ -312,6 +460,7 @@ export function ChatPage(props: {
           setLive((prev) => ({ ...prev, [slotId]: acc }));
         }, {
           modality: agent.modality,
+          signal: stopper.signal,
           onImage: (url) => {
             images.push(url);
             setLiveImages((prev) => ({
@@ -338,6 +487,14 @@ export function ChatPage(props: {
           // Streamed PCM16 becomes one playable WAV persisted with the reply.
           const wav = pcm16ToWav(audioChunks);
           const media = wav ? [...images, wav] : images;
+          stoppers.current.delete(agent.id);
+          // Stopped before the model said anything: mark the turn, the way
+          // an error marks it, rather than leaving a blank that vanishes.
+          // Stopped mid-reply, the partial text *is* the reply.
+          if (stopper.signal.aborted && !acc && media.length === 0) {
+            acc = `⏹ ${t('stopped')}`;
+            setLive((prev) => ({ ...prev, [slotId]: acc }));
+          }
           await api.finalizeMessage(slotId, acc, media);
           setStreamingIds((prev) => {
             const next = new Set(prev);
@@ -396,8 +553,10 @@ export function ChatPage(props: {
             streamingIds={streamingIds}
             hidden={expanded !== null && expanded !== agent.id}
             expanded={expanded === agent.id}
+            streaming={agent.messages.some((m) => streamingIds.has(m.id))}
             onToggleExpand={() =>
               setExpandedId(expanded === agent.id ? null : agent.id)}
+            onStop={() => stoppers.current.get(agent.id)?.abort()}
             onClear={async () => {
               if (sending) return;
               await api.clearThread(agent.id);
@@ -428,6 +587,7 @@ export function ChatPage(props: {
           onToast={props.onToast}
         />
         <textarea
+          ref={inputRef}
           value={input}
           placeholder={t('input_placeholder')}
           onChange={(e) => setInput(e.target.value)}
@@ -438,10 +598,37 @@ export function ChatPage(props: {
             }
           }}
         />
-        <button className="accent" disabled={sending} onClick={send}>
-          {t('send')}
+        {/* One stamped control, two jobs: while the chorus is speaking it
+            stops every voice at once, then goes back to sending. */}
+        <button
+          className="accent"
+          onClick={sending ? stopAll : send}
+        >
+          {sending ? t('stop_all') : t('send')}
         </button>
       </div>
+      {picked && pickedAgent && (
+        <div
+          ref={popRef}
+          className={`quote-pop${picked.up ? ' up' : ''}`}
+          style={{
+            left: picked.x,
+            top: picked.y,
+            '--agent': accent(pickedAgent.hue),
+          } as CSSProperties}
+        >
+          <button
+            title={t('quote_selection_hint')}
+            // Keep the selection alive: pressing here must not collapse it.
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => liftPassage(
+              picked.mine ? t('you') : pickedAgent.name, picked.text)}
+          >
+            <span className="dot" />
+            {t('quote_selection')}
+          </button>
+        </div>
+      )}
     </main>
   );
 }

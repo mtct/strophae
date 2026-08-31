@@ -84,6 +84,11 @@ export interface StreamOptions {
   /** Initial backoff before the first retry (doubled with jitter each time);
       a 429's `Retry-After` header overrides it. Exposed mainly for tests. */
   retryBaseMs?: number;
+  /** Stop the reply on demand (the column's stop control). Whatever has
+      already streamed is the reply: aborting resolves normally, so the
+      caller persists the partial text instead of an error, and no attempt
+      is retried after it. */
+  signal?: AbortSignal;
 }
 
 function requestModalities(modality: Modality): object {
@@ -135,12 +140,17 @@ export async function streamAgent(
   // already painted tokens/images would duplicate them, so once the column
   // shows anything a mid-stream failure is surfaced as-is, never retried.
   let progressed = false;
+  const stopped = options.signal;
 
   for (let attempt = 1; ; attempt++) {
+    // Stopped between attempts (or before the first): nothing left to ask.
+    if (stopped?.aborted) return;
     // Inactivity watchdog: with a dozen personas firing at once, a provider
     // that accepts the connection but never streams (or dies mid-reply) would
     // otherwise hang the column forever — the fetch itself has no timeout.
     const controller = new AbortController();
+    const onStop = () => controller.abort();
+    stopped?.addEventListener('abort', onStop);
     let timedOut = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
     const rearm = () => {
@@ -223,6 +233,9 @@ export async function streamAgent(
       }
       return; // body ended (with or without a [DONE]) — the reply is complete
     } catch (err) {
+      // Stopped on purpose: what already streamed *is* the reply. Not an
+      // error, and never worth another attempt.
+      if (stopped?.aborted) return;
       // A settled HTTP error is final — report it, never re-fetch. Only a
       // connection-level failure with no output yet (dead socket, our idle
       // abort, a network drop) is transient and worth another attempt.
@@ -236,6 +249,7 @@ export async function streamAgent(
       throw timedOut ? new Error('timeout') : err;
     } finally {
       if (timer) clearTimeout(timer);
+      stopped?.removeEventListener('abort', onStop);
     }
   }
 }

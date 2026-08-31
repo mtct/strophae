@@ -44,7 +44,14 @@ export function saveApiKey(dir: string, value: string): void {
 }
 
 export function registerIpc(store: Store, dir: string,
-                            osLang: 'en' | 'it'): void {
+                            osLang: 'en' | 'it',
+                            options: { ephemeralKey?: boolean } = {}): void {
+  // The self-test runs offscreen against a throwaway profile, and must not
+  // touch the OS keychain either: a freshly signed build asking safeStorage
+  // for its item raises a permission prompt, which blocks the main process
+  // with nobody there to answer it. In check mode the key lives in memory
+  // for the length of the run.
+  let ephemeralKey = '';
   const state = (): AppState => ({
     conversations: store.conversations(),
     personas: store.personas(),
@@ -147,8 +154,12 @@ export function registerIpc(store: Store, dir: string,
     store.setLanguage(language));
   ipcMain.handle('settings:setModels', (_e, models: ModelEntry[]) =>
     store.setModels(models));
-  ipcMain.handle('apikey:get', () => loadApiKey(dir));
-  ipcMain.handle('apikey:set', (_e, value: string) => saveApiKey(dir, value));
+  ipcMain.handle('apikey:get', () =>
+    (options.ephemeralKey ? ephemeralKey : loadApiKey(dir)));
+  ipcMain.handle('apikey:set', (_e, value: string) => {
+    if (options.ephemeralKey) ephemeralKey = value;
+    else saveApiKey(dir, value);
+  });
 
   // Links in rendered markdown replies open in the user's browser, never in
   // the app window (which stays pinned to the bundled index.html). Only web

@@ -252,3 +252,75 @@ describe('streamAgent retries transient failures', () => {
     expect(calls.n).toBe(1);
   });
 });
+
+// The stop control: the reader cuts a column short before the model is
+// done. Whatever already streamed is the reply, so this must settle as a
+// normal completion — never an error banner, never another attempt.
+describe('streamAgent stops on demand', () => {
+  const realFetch = globalThis.fetch;
+  afterEach(() => { globalThis.fetch = realFetch; });
+
+  const encode = (s: string) => new TextEncoder().encode(s);
+
+  /** A 200 whose body emits the given frames, then hangs until the request
+      is aborted — the way a real stream dies when the caller stops it. */
+  function openFetch(frames: string[]) {
+    const calls = { n: 0 };
+    globalThis.fetch = ((_url: string, init: RequestInit) => {
+      calls.n += 1;
+      const signal = init.signal!;
+      const body = new ReadableStream<Uint8Array>({
+        start(c) {
+          for (const f of frames) c.enqueue(encode(f));
+          signal.addEventListener('abort', () =>
+            c.error(new DOMException('aborted', 'AbortError')));
+        },
+      });
+      return Promise.resolve(new Response(body, { status: 200 }));
+    }) as unknown as typeof fetch;
+    return calls;
+  }
+
+  test('stopping mid-reply resolves, keeping the tokens already in', async () => {
+    openFetch(['data: {"choices":[{"delta":{"content":"half a "}}]}\n']);
+    const stop = new AbortController();
+    const tokens: string[] = [];
+    const run = streamAgent('m', [], 'k', (t) => {
+      tokens.push(t);
+      stop.abort(); // the reader presses stop on the first token
+    }, { signal: stop.signal, retryBaseMs: 1 });
+    await expect(run).resolves.toBeUndefined();
+    expect(tokens).toEqual(['half a ']);
+  });
+
+  test('stopping is never mistaken for a dropped connection', async () => {
+    // No output yet, so the retry path would normally fire: a deliberate
+    // stop must not re-ask the model.
+    const calls = openFetch([]);
+    const stop = new AbortController();
+    const run = streamAgent('m', [], 'k', () => {},
+      { signal: stop.signal, retryBaseMs: 1, maxAttempts: 3 });
+    stop.abort();
+    await expect(run).resolves.toBeUndefined();
+    expect(calls.n).toBe(1);
+  });
+
+  test('a signal already aborted never reaches the network', async () => {
+    const calls = openFetch([]);
+    const stop = new AbortController();
+    stop.abort();
+    await expect(
+      streamAgent('m', [], 'k', () => {}, { signal: stop.signal }),
+    ).resolves.toBeUndefined();
+    expect(calls.n).toBe(0);
+  });
+
+  test('an idle timeout still fails as such when nobody stopped it', async () => {
+    openFetch([]);
+    const stop = new AbortController();
+    await expect(
+      streamAgent('m', [], 'k', () => {},
+        { signal: stop.signal, idleTimeoutMs: 20, maxAttempts: 1 }),
+    ).rejects.toThrow('timeout');
+  });
+});

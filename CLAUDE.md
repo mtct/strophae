@@ -52,7 +52,9 @@ the renderer CSP in `src/renderer/index.html`).
   build: `bunx electron-builder --dir`.
 - **Environment gotcha**: this workspace (VSCode extension host) exports
   `ELECTRON_RUN_AS_NODE=1`, which turns the Electron binary into plain
-  Node. Launch with `env -u ELECTRON_RUN_AS_NODE …` in terminals here; the
+  Node. Launch with `env -u ELECTRON_RUN_AS_NODE …` in terminals here —
+  including `open -a`, which passes this shell's environment through Launch
+  Services, so a packaged .app opened without the prefix dies silently; the
   `check` npm script sets it empty instead, which unsets it on macOS only.
   **CI never sets it at all**: Electron reads the variable with `getenv_s`
   on Windows, where an empty value still reports a size, so an empty
@@ -69,7 +71,8 @@ src/shared/    types.ts (domain model, Modality) · models.ts (DEFAULT_MODELS
                seed, modelSlug(label, models), supportsImageOutput/
                supportsAudioOutput, defaultModality, HUE_PALETTE, default
                agent, title rules) · personas.ts (SIX_HATS seed library) ·
-               fences.ts (```mermaid block parser) · audio.ts (streamed
+               fences.ts (```mermaid block parser) · quote.ts (a lifted
+               passage as an attributed `>` quotation) · audio.ts (streamed
                PCM16 → WAV data URL) · time.ts (sidebar recency buckets) ·
                i18n.ts (en/it catalogs, translate())
 src/main/      main.ts (window, --check mode) · store.ts (persistence) ·
@@ -105,6 +108,19 @@ packaging/     icons + Mac App Store entitlements (electron-builder
   progressively, so those columns fill at the end) → `msg:finalize` writes
   each slot's full text (or `⚠ error`). The main process never calls
   OpenRouter.
+- **Quoting across the council** (`src/shared/quote.ts` + ChatPage): a text
+  selection inside one column raises a small control under it (the voice's
+  colour as a solid square, never red — Send is the stamped control here),
+  which writes the passage into the shared composer as an attributed `>`
+  quotation (`quotePassage` + `appendQuote`, both pure and tested), so the
+  next Send puts the same excerpt to *every* persona. Quotations stack, the
+  composer grows to fit them (up to 260px), and the caret lands under the
+  last one. A selection dragged across two columns has no single speaker and
+  offers nothing; a selection inside your own turn quotes as yours
+  (`.turn-label` is `user-select: none`, so the label never rides along).
+  For this to work a column now follows its stream only while already at the
+  foot of the thread — scrolled up to lift an older passage, the view stays
+  put.
 - **Stream resilience** (`streamAgent`): each request carries an
   *inactivity* watchdog (`idleTimeoutMs`, default 120 s) — an `AbortController`
   rearmed on every received byte (tokens *and* OpenRouter's
@@ -117,6 +133,18 @@ packaging/     icons + Mac App Store entitlements (electron-builder
   has reached the caller** — once tokens/media stream in, a mid-stream drop
   is surfaced as-is (a partial reply beats a duplicated one). A settled
   HTTP error is a `FatalError` so the connection-retry path leaves it be.
+- **Stopping a reply** (`StreamOptions.signal` + ChatPage's `stoppers`
+  map): a send registers one `AbortController` per agent *before* the first
+  await, so a stop pressed in the gap before dispatch still lands. While a
+  column streams its header carries a solid square in the persona's colour
+  (`.stop-btn`) that cuts that voice alone; the composer's stamped control
+  turns from Send into Stop and cuts them all. An aborted `streamAgent`
+  **resolves** instead of throwing — what already streamed *is* the reply,
+  finalized as-is — and the abort is checked before the retry branch, so a
+  deliberate stop is never mistaken for a dropped connection. Stopped before
+  a single token, the slot is finalized `⏹ stopped` (the way an error is
+  marked `⚠ …`) rather than left an empty turn that vanishes from the
+  column.
 - **API key**: encrypted at rest via `safeStorage` (OS keychain),
   `packaging/openrouter.key` in userData; handed to the renderer only to
   call OpenRouter directly.
@@ -181,7 +209,13 @@ packaging/     icons + Mac App Store entitlements (electron-builder
 - **--check mode** (`main.ts` + `App.tsx` `runSelfTest`): loads the app
   offscreen with `?check=1`, renderer walks the screens and reports
   `{check: bool}` via `check:ready`; `check:shot` captures PNGs. 15s
-  timeout guards a hung renderer.
+  timeout guards a hung renderer. The walk seeds its own content — a
+  persisted exchange for the quote checks, then a *fake SSE stream*
+  (`globalThis.fetch` stubbed in the renderer, no network) plus a throwaway
+  key for the stop checks. Check mode also keeps that key in memory rather
+  than in `safeStorage` (`registerIpc`'s `ephemeralKey`): a freshly signed
+  build asking the keychain for its item raises a permission prompt, which
+  would block the main process with nobody there to answer it.
 
 ## Packaging & stores
 

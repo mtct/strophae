@@ -70,6 +70,10 @@ body {
   border-radius: 0;
 }
 
+/* Held text is a solid field like everything else here — the yellow of the
+   triad, since selecting a passage is a state, not an action. */
+::selection { background: var(--yellow); color: var(--ink); }
+
 /* A label: lowercase, letterspaced, set in the geometric sans. Only ever
    product text — never something the user or a model wrote. */
 .section-label,
@@ -436,6 +440,16 @@ textarea::placeholder { font-style: normal; }
   white-space: nowrap;
 }
 .col-header .expand-btn { padding: 2px 7px; font-size: 13px; }
+/* Cut this voice short: a solid square in its own colour — the same mark
+   the waiting squares tick in, now something you can press. Whatever has
+   already printed stays on the sheet. */
+.col-header .stop-btn { padding: 4px 6px; line-height: 0; }
+.stop-mark {
+  display: block;
+  width: 10px;
+  height: 10px;
+  background: var(--agent, var(--ink));
+}
 .thread {
   flex: 1;
   overflow-y: auto;
@@ -474,7 +488,10 @@ textarea::placeholder { font-style: normal; }
   white-space: pre-wrap;
   overflow-wrap: break-word;
 }
+/* Chrome, not content: it must not ride along when a passage is selected
+   out of the turn underneath it. */
 .turn-label {
+  user-select: none;
   display: block;
   font-size: 9px;
   font-weight: 600;
@@ -685,7 +702,10 @@ textarea::placeholder { font-style: normal; }
 }
 .input-row textarea {
   flex: 1;
+  /* The base height; ChatPage grows it to fit a quoted passage. */
   height: 64px;
+  max-height: 260px;
+  overflow-y: auto;
   border-color: transparent;
   border-left-color: var(--ink);
   background-color: transparent;
@@ -697,6 +717,37 @@ textarea::placeholder { font-style: normal; }
   box-shadow: none;
 }
 .input-row button.accent { align-self: stretch; padding: 0 22px; }
+
+/* Lifting a passage: select inside a column and this hangs under the
+   selection, carrying that voice's colour as a solid square. It writes the
+   passage into the shared prompt, so one Send puts it to the whole
+   council. Plain black keyline, never red — the stamped control on this
+   screen is Send. */
+.quote-pop {
+  position: fixed;
+  z-index: 40;
+  transform: translate(-50%, 0);
+}
+.quote-pop.up { transform: translate(-50%, -100%); }
+.quote-pop button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--display);
+  text-transform: lowercase;
+  letter-spacing: 0.13em;
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 5px 11px;
+  border: var(--key) solid var(--ink);
+  background: var(--sheet);
+}
+.quote-pop .dot {
+  width: 9px;
+  height: 9px;
+  flex: none;
+  background: var(--agent, var(--ink));
+}
 
 /* ---------------------------------------------------------- attachments */
 

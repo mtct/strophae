@@ -71,7 +71,7 @@ app.whenReady().then(() => {
 
   const dir = app.getPath('userData');
   store = new Store(dir, osLanguage());
-  registerIpc(store, dir, osLanguage());
+  registerIpc(store, dir, osLanguage(), { ephemeralKey: CHECK });
 
   const win = createWindow();
 

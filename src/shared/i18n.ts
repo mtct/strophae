@@ -36,11 +36,20 @@ const en = {
   input_placeholder:
     'Message every agent… (Enter to send, Shift+Enter for newline)',
   send: 'Send',
+  // Cutting a reply short: one voice from its column, all of them from the
+  // composer (where the stamped control turns into the stop).
+  stop_all: 'Stop',
+  stop_generation: 'Stop this reply',
+  stopped: 'Stopped',
   need_key: 'Add your OpenRouter API key in Settings first',
   clear_thread: 'Clear thread',
   thread_cleared: 'Thread cleared',
   expand_chat: 'Expand to full window',
   restore_chat: 'Back to all agents',
+  // Lifting a passage out of one column into the prompt every agent reads.
+  quote_selection: 'Quote',
+  quote_selection_hint: 'Quote this passage into the prompt for every agent',
+  passage_quoted: 'Passage added to the prompt',
   attach_files: 'Attach files',
   remove_attachment: 'Remove attachment',
   attachment_failed:
@@ -169,11 +178,18 @@ const it: Record<MessageKey, string> = {
   input_placeholder:
     'Scrivi a tutti gli agenti… (Invio per inviare, Maiusc+Invio per andare a capo)',
   send: 'Invia',
+  stop_all: 'Interrompi',
+  stop_generation: 'Interrompi questa risposta',
+  stopped: 'Interrotto',
   need_key: 'Aggiungi prima la tua chiave API OpenRouter nelle Impostazioni',
   clear_thread: 'Svuota il thread',
   thread_cleared: 'Thread svuotato',
   expand_chat: 'Allarga a tutta finestra',
   restore_chat: 'Torna a tutti gli agenti',
+  quote_selection: 'Cita',
+  quote_selection_hint:
+    'Cita questo passaggio nel prompt per tutti gli agenti',
+  passage_quoted: 'Passaggio aggiunto al prompt',
   attach_files: 'Allega file',
   remove_attachment: 'Rimuovi allegato',
   attachment_failed:
