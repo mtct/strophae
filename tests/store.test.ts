@@ -252,6 +252,37 @@ describe('agents & personas', () => {
     expect(kept.systemPrompt).toBe(hat.systemPrompt);
   });
 
+  test('a persona can be created and edited straight in the library', () => {
+    const made = store.createPersona({
+      name: 'Skeptic', hue: 20, model: 'GPT-4o', personaType: 'generic',
+      modality: 'text', systemPrompt: 'Doubt it.',
+    });
+    expect(store.personas().some((p) => p.id === made.id)).toBe(true);
+    store.updatePersona(made.id, { systemPrompt: 'Doubt everything.' });
+    store.flush();
+    expect(openStore('en', dir).personas()
+      .find((p) => p.id === made.id)!.systemPrompt).toBe('Doubt everything.');
+    expect(() => store.updatePersona(-1, { name: 'x' })).toThrow();
+  });
+
+  test('a draft lineup is replaced whole, a running session never', () => {
+    const conv = store.createSession();
+    const fields = {
+      hue: 255, model: 'GPT-4o', personaType: 'generic',
+      modality: 'text' as const, systemPrompt: '',
+    };
+    store.setLineup(conv.id,
+      [{ ...fields, name: 'A' }, { ...fields, name: 'B' }]);
+    expect(store.conversation(conv.id).agents.map((a) => [a.name, a.order]))
+      .toEqual([['A', 0], ['B', 1]]);
+    store.addAgentWith(conv.id, { ...fields, name: 'C' });
+    expect(store.conversation(conv.id).agents.at(-1)!.order).toBe(2);
+    expect(() => store.setLineup(conv.id, [])).toThrow('need_one_agent');
+    store.send(conv.id, 'hello');
+    expect(() => store.setLineup(conv.id, [{ ...fields, name: 'D' }]))
+      .toThrow('not a draft');
+  });
+
   test('documents on the retired audio model follow the seed to its heir',
     () => {
       const stale = mkdtempSync(join(tmpdir(), 'strophae-'));
@@ -442,6 +473,18 @@ describe('attachments', () => {
     expect(store.conversation(conv.id).agents[0]!.attachments)
       .toHaveLength(1);
     store.detachFromAgent(agent.id, att.id);
+    expect(existsSync(payloadPath(att.id))).toBe(false);
+  });
+
+  test('replacing a lineup clears the files of the agents leaving', () => {
+    const conv = store.createSession();
+    const att = fakeAtt(store.claimId());
+    seed(att);
+    store.attachToAgent(conv.agents[0]!.id, [att]);
+    store.setLineup(conv.id, [{
+      name: 'Fresh', hue: 30, model: 'GPT-4o', personaType: 'generic',
+      modality: 'text', systemPrompt: '',
+    }]);
     expect(existsSync(payloadPath(att.id))).toBe(false);
   });
 

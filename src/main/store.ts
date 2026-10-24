@@ -58,6 +58,11 @@ const RETIRED_AUDIO_MODEL = {
   toSlug: 'openai/gpt-audio-mini',
 };
 
+/** What an agent is made of, short of its id, place and thread — and what a
+    persona keeps of one. */
+export type AgentFields = Pick<Agent,
+  'name' | 'hue' | 'model' | 'personaType' | 'modality' | 'systemPrompt'>;
+
 const EMPTY: Data = {
   nextId: 1,
   conversations: [],
@@ -280,10 +285,7 @@ export class Store {
 
   // -------------------------------------------------------------- agents
 
-  private buildAgent(conv: Conversation, fields: {
-    name: string; hue: number; model: string; personaType: string;
-    modality: Modality; systemPrompt: string;
-  }): Agent {
+  private buildAgent(conv: Conversation, fields: AgentFields): Agent {
     return {
       id: this.id(),
       order: conv.agents.length,
@@ -325,6 +327,33 @@ export class Store {
     return agent;
   }
 
+  /** Add an agent spelled out in full (an MCP client composing a council:
+      a library persona with its overrides, or a one-off voice). */
+  addAgentWith(convId: number, fields: AgentFields): Agent {
+    const conv = this.conversation(convId);
+    const agent = this.buildAgent(conv, fields);
+    conv.agents.push(agent);
+    this.save();
+    return agent;
+  }
+
+  /** Replace a draft's whole lineup at once — an MCP client laying out a
+      council. Only a draft: an agent leaving would take its thread with it.
+      The agents leaving take their attachment payloads along. */
+  setLineup(convId: number, lineup: AgentFields[]): Conversation {
+    const conv = this.conversation(convId);
+    if (lineup.length === 0) throw new Error('need_one_agent');
+    if (conv.agents.some((a) => a.messages.length > 0)) {
+      throw new Error(`Conversation ${convId} is not a draft`);
+    }
+    const gone = conv.agents.flatMap((a) => this.attachmentsInAgent(a));
+    conv.agents = [];
+    for (const fields of lineup) conv.agents.push(this.buildAgent(conv, fields));
+    this.gcAttachments(gone);
+    this.save();
+    return conv;
+  }
+
   updateAgent(agentId: number, fields: Partial<
       Pick<Agent, 'name' | 'hue' | 'model' | 'modality' | 'systemPrompt'>>)
       : Agent {
@@ -363,6 +392,27 @@ export class Store {
       createdAt: this.now(),
     };
     this.data.personas.push(persona);
+    this.save();
+    return persona;
+  }
+
+  /** Save a persona straight to the library, not from an agent on a card
+      (an MCP client creating one). */
+  createPersona(fields: AgentFields): Persona {
+    const persona: Persona = { id: this.id(), ...fields, createdAt: this.now() };
+    this.data.personas.push(persona);
+    this.save();
+    return persona;
+  }
+
+  /** Edit a library persona. Agents already built from it keep their own
+      copy, as they do when it is deleted. */
+  updatePersona(personaId: number, fields: Partial<
+      Pick<Persona, 'name' | 'hue' | 'model' | 'modality' | 'systemPrompt'>>)
+      : Persona {
+    const persona = this.data.personas.find((p) => p.id === personaId);
+    if (!persona) throw new Error(`No persona ${personaId}`);
+    Object.assign(persona, fields);
     this.save();
     return persona;
   }
@@ -511,7 +561,7 @@ export class Store {
   }
 
   /** The stock default when the user still lists it, else their first. */
-  private defaultModel(): string {
+  defaultModel(): string {
     const models = this.data.settings.models;
     return models.some((m) => m.label === DEFAULT_AGENT.model)
       ? DEFAULT_AGENT.model

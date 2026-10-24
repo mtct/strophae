@@ -6,6 +6,8 @@ import type {
   Attachment,
   Conversation,
   Language,
+  McpChange,
+  McpClientConfig,
   ModelEntry,
   Persona,
   SendResult,
@@ -53,8 +55,14 @@ export interface StrophaeApi {
   setApiKey(value: string): Promise<void>;
   /** Open a web/mail link in the OS browser (validated main-side). */
   openExternal(url: string): Promise<void>;
+  /** The command a local MCP client runs to reach this app. */
+  mcpConfig(): Promise<McpClientConfig>;
+  /** Follow what a connected MCP client changes; returns the unsubscribe. */
+  onMcpChanged(listener: (change: McpChange) => void): () => void;
   checkShot(name: string): Promise<void>;
   checkReady(report: Record<string, boolean>): Promise<void>;
+  /** Self-test only: compose a council over the MCP socket; the replies. */
+  checkMcp(): Promise<unknown[]>;
 }
 
 declare global {

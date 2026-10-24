@@ -91,3 +91,19 @@ export interface SendResult {
   conversation: Conversation;
   slotIds: Record<number, number>; // agentId -> messageId
 }
+
+// What a connected MCP client just changed (src/main/mcp-tools.ts), pushed
+// to the window so it can follow: the council it laid out on the compose
+// page, or the persona library.
+export interface McpChange {
+  convId?: number;
+  personas?: boolean;
+}
+
+// The command a local MCP client runs to reach the app — shown in Settings
+// as the snippet to paste into the client's configuration.
+export interface McpClientConfig {
+  command: string;
+  args: string[];
+  env: Record<string, string>;
+}

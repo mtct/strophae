@@ -32,8 +32,19 @@ const api = {
   getApiKey: invoke('apikey:get'),
   setApiKey: invoke('apikey:set'),
   openExternal: invoke('shell:openExternal'),
+  mcpConfig: invoke('mcp:config'),
+  // Pushed by the main process when a connected MCP client changes the
+  // council or the library; returns the unsubscribe.
+  onMcpChanged: (listener: (change: unknown) => void) => {
+    const relay = (_e: unknown, change: unknown) => listener(change);
+    ipcRenderer.on('mcp:changed', relay);
+    return () => {
+      ipcRenderer.removeListener('mcp:changed', relay);
+    };
+  },
   checkShot: invoke('check:shot'),
   checkReady: invoke('check:ready'),
+  checkMcp: invoke('check:mcp'),
 };
 
 export type StrophaeApi = typeof api;

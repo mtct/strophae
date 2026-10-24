@@ -19,6 +19,9 @@ export function App() {
   const [view, setView] = useState<View | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [chatExpanded, setChatExpanded] = useState(false);
+  // Bumped whenever a connected MCP client edits the council, so the
+  // compose page remounts and every field shows what the client wrote.
+  const [composeRev, setComposeRev] = useState(0);
   const [toast, setToast] = useState('');
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -53,6 +56,20 @@ export function App() {
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // A local MCP client at work (src/main/mcp-tools.ts): a council it lays
+  // out is the draft, so follow it to the compose page, where the person
+  // reviews it and starts the chat.
+  useEffect(() => api.onMcpChanged(async (change) => {
+    await reload();
+    if (change.convId === undefined) {
+      showToast(t('mcp_library_updated'));
+      return;
+    }
+    setView({ page: 'compose', convId: change.convId });
+    setComposeRev((n) => n + 1);
+    showToast(t('mcp_council_updated'));
+  }), [reload, showToast, t]);
 
   async function runSelfTest() {
     const report: Record<string, boolean> = {};
@@ -234,11 +251,35 @@ export function App() {
       globalThis.fetch = realFetch;
       await api.setApiKey('');
     }
+    // A local MCP client composing the council, end to end: the call goes
+    // over the socket and through the tools, and comes back as a push that
+    // carries the window to the compose page with the lineup it laid out —
+    // seed hats named by kind, whatever language their names are in.
+    {
+      const { personas } = await api.getState();
+      const hat = (kind: string) =>
+        personas.find((p) => p.personaType === kind)?.name;
+      const replies = await api.checkMcp() as
+        { result?: { isError?: boolean } }[];
+      await new Promise((r) => setTimeout(r, 400));
+      const seated = Array.from(document.querySelectorAll<HTMLInputElement>(
+        '.compose-page .agent-card input[type="text"]'), (el) => el.value);
+      report['mcp client composes the council'] = replies.length === 2
+        && replies[1]?.result?.isError === undefined
+        && seated.join('|') === [hat('white_hat'), hat('black_hat')].join('|')
+        && document.querySelector<HTMLTextAreaElement>(
+          '.compose-page .shared-input')?.value
+          === 'We are choosing a name for a bakery.';
+      await api.checkShot('compose-mcp');
+    }
     // Settings modal: the model list must show the seeded defaults.
     setSettingsOpen(true);
     await new Promise((r) => setTimeout(r, 250));
     report['settings model list'] =
       document.querySelectorAll('.modal .model-row').length >= 2;
+    // ...and the lines a local MCP client is configured with.
+    report['settings mcp snippet'] = (document.querySelector(
+      '.modal .mcp-config')?.textContent ?? '').includes('bridge.js');
     await api.checkShot('settings');
     setSettingsOpen(false);
     await api.checkReady(report);
@@ -267,6 +308,7 @@ export function App() {
       />}
       {conv && view.page === 'compose' && (
         <ComposePage
+          key={`${conv.id}:${composeRev}`}
           t={t}
           conv={conv}
           personas={state.personas}

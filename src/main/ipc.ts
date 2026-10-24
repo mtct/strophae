@@ -5,11 +5,13 @@
 import { readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 
-import { BrowserWindow, dialog, ipcMain, safeStorage, shell } from 'electron';
+import {
+  app, BrowserWindow, dialog, ipcMain, safeStorage, shell,
+} from 'electron';
 
 import { translate } from '../shared/i18n';
 import type {
-  AppState, Attachment, Language, ModelEntry,
+  AppState, Attachment, Language, McpClientConfig, ModelEntry,
 } from '../shared/types';
 import {
   copyAttachmentTo,
@@ -160,6 +162,15 @@ export function registerIpc(store: Store, dir: string,
     if (options.ephemeralKey) ephemeralKey = value;
     else saveApiKey(dir, value);
   });
+
+  // What a local MCP client runs to reach this app (mcp.ts): the app's own
+  // binary as plain Node, on the bridge script bundled inside it. Settings
+  // shows it for the person to paste into their client's configuration.
+  ipcMain.handle('mcp:config', (): McpClientConfig => ({
+    command: process.execPath,
+    args: [join(app.getAppPath(), 'dist', 'mcp', 'bridge.js')],
+    env: { ELECTRON_RUN_AS_NODE: '1' },
+  }));
 
   // Links in rendered markdown replies open in the user's browser, never in
   // the app window (which stays pinned to the bundled index.html). Only web

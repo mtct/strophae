@@ -65,13 +65,55 @@ bun run dist            # package with electron-builder (release/)
 - **Export** a session as Markdown to the clipboard.
 - English and Italian interfaces, switchable live from Settings.
 
+## Compose from an MCP client
+
+strophae is also a [Model Context Protocol](https://modelcontextprotocol.io)
+server, so a local client — Claude Desktop, Claude Code, LM Studio, an Ollama
+front-end with MCP support — can set up the council for you: *"put the black
+and green hats and a skeptical accountant on it, shared context: we are
+pricing a new product"*. The client's model gets these tools:
+
+| Tool | What it does |
+| --- | --- |
+| `list_personas`, `list_models` | read the persona library and the configured models |
+| `create_persona`, `update_persona` | add a persona to the library, or edit one |
+| `compose_council` | lay out the whole council: library personas (with optional overrides) and one-off voices, plus the shared prompt |
+| `set_shared_prompt`, `add_member`, `update_member`, `remove_member` | refine it piece by piece |
+| `get_council` | read back what is on the table |
+
+The council appears on the compose page as it is built; you review it there
+and press **start chatting** yourself — no tool sends a prompt, reads your
+conversations or touches your API key.
+
+**Settings → MCP clients** shows the exact lines for your install, with a
+copy button. On macOS they look like this:
+
+```json
+{
+  "mcpServers": {
+    "strophae": {
+      "command": "/Applications/Strophae.app/Contents/MacOS/Strophae",
+      "args": ["/Applications/Strophae.app/Contents/Resources/app.asar/dist/mcp/bridge.js"],
+      "env": { "ELECTRON_RUN_AS_NODE": "1" }
+    }
+  }
+}
+```
+
+With Claude Code: `claude mcp add strophae -e ELECTRON_RUN_AS_NODE=1 --
+<command> <args>` with the same two paths. The client runs the app's own
+binary as plain Node on a small bridge script, which relays to the running app
+over a local socket — and starts strophae first when it is not open.
+
 ## Privacy
 
 Everything is local. There is no strophae server, no telemetry and no account
 — the app's only network egress is the OpenRouter API, enforced by the
 renderer's Content Security Policy. Your conversations live in a single JSON
 document in your OS user-data folder, and your API key is encrypted at rest by
-the OS keychain.
+the OS keychain. The MCP endpoint is not a network listener: it is a local
+socket under your own user account (a named pipe on Windows), reachable only by
+programs you run.
 
 ## Distribution
 

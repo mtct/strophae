@@ -1,6 +1,7 @@
-// Bundle the three Electron entry points with Bun.build and copy the
-// static renderer assets. Output layout (dist/) matches package.json#main
-// and the loadFile/preload paths in src/main/main.ts.
+// Bundle the three Electron entry points (plus the MCP stdio bridge, which
+// runs as plain Node) with Bun.build and copy the static renderer assets.
+// Output layout (dist/) matches package.json#main and the loadFile/preload
+// paths in src/main/main.ts.
 
 import { cpSync, mkdirSync, rmSync } from 'node:fs';
 
@@ -35,6 +36,15 @@ await build('preload', {
   external: ['electron'],
 });
 
+// The MCP bridge (src/mcp/bridge.ts): run by a client as the app's binary
+// in Node mode, so it needs nothing of Electron's.
+await build('mcp bridge', {
+  entrypoints: ['src/mcp/bridge.ts'],
+  outdir: `${outbase}/mcp`,
+  target: 'node',
+  format: 'cjs',
+});
+
 await build('renderer', {
   entrypoints: ['src/renderer/index.tsx'],
   outdir: `${outbase}/renderer`,
@@ -45,4 +55,4 @@ await build('renderer', {
 cpSync('src/renderer/index.html', `${outbase}/renderer/index.html`);
 cpSync('src/renderer/styles.css', `${outbase}/renderer/styles.css`);
 
-console.log('bundled: dist/main dist/preload dist/renderer');
+console.log('bundled: dist/main dist/preload dist/mcp dist/renderer');

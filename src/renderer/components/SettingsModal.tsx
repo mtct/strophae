@@ -17,9 +17,14 @@ export function SettingsModal(props: {
   const [models, setModels] = useState<ModelEntry[]>(props.models);
   const [newLabel, setNewLabel] = useState('');
   const [newSlug, setNewSlug] = useState('');
+  const [mcp, setMcp] = useState('');
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     api.getApiKey().then(setKey);
+    // The `mcpServers` shape Claude, LM Studio and most other clients read.
+    api.mcpConfig().then((config) => setMcp(JSON.stringify(
+      { mcpServers: { strophae: config } }, null, 2)));
   }, []);
 
   const addModel = () => {
@@ -106,6 +111,21 @@ export function SettingsModal(props: {
           </button>
         </div>
         <div className="hint">{t('models_hint')}</div>
+        <label>{t('mcp_label')}</label>
+        <pre className="mcp-config">{mcp}</pre>
+        <div className="mcp-row">
+          <div className="hint">{t('mcp_hint')}</div>
+          <button
+            disabled={!mcp}
+            onClick={async () => {
+              await navigator.clipboard.writeText(mcp);
+              setCopied(true);
+              setTimeout(() => setCopied(false), 1800);
+            }}
+          >
+            {t(copied ? 'copied' : 'copy')}
+          </button>
+        </div>
         <div className="actions">
           <button onClick={props.onClose}>{t('cancel')}</button>
           <button className="accent" onClick={save}>{t('save')}</button>

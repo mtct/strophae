@@ -62,7 +62,8 @@ the renderer CSP in `src/renderer/index.html`).
   missing V8 snapshot.
 - **Bun gotcha**: `Bun.build` inlines `__dirname` to the *source* dir —
   main-process paths must go through `app.getAppPath()` (see
-  `src/main/main.ts`).
+  `src/main/main.ts`); the MCP bridge, which has no `app`, reads its own
+  path from `process.argv[1]`.
 
 ## Architecture
 
@@ -75,9 +76,13 @@ src/shared/    types.ts (domain model, Modality) · models.ts (DEFAULT_MODELS
                passage as an attributed `>` quotation) · audio.ts (streamed
                PCM16 → WAV data URL) · time.ts (sidebar recency buckets) ·
                i18n.ts (en/it catalogs, translate())
-src/main/      main.ts (window, --check mode) · store.ts (persistence) ·
-               ipc.ts (IPC surface + safeStorage API key) · attachments.ts
-               (file import/extraction + payload files + GC)
+src/main/      main.ts (window, --check mode, single-instance lock) ·
+               store.ts (persistence) · ipc.ts (IPC surface + safeStorage
+               API key) · attachments.ts (file import/extraction + payload
+               files + GC) · mcp.ts (MCP JSON-RPC session, local socket,
+               mcpEndpoint) · mcp-tools.ts (the council tools)
+src/mcp/       bridge.ts (stdio ↔ socket relay a client runs; starts the
+               app when it is not running)
 src/preload/   preload.ts (contextBridge → window.strophae)
 src/renderer/  React app: App.tsx (state, view routing, toasts) ·
                components/ (Sidebar, ComposePage, ChatPage, SettingsModal) ·
@@ -87,9 +92,10 @@ src/renderer/  React app: App.tsx (state, view routing, toasts) ·
                every accent flattening to mud; a column publishes it as the
                --agent custom property, and it is only ever a solid field,
                never a tint) · styles.css · index.html (CSP)
-scripts/       bundle.ts (Bun.build for main/preload/renderer + static copy)
+scripts/       bundle.ts (Bun.build for main/preload/mcp bridge/renderer +
+               static copy)
 tests/         bun test suites for src/shared (audio, models, fences,
-               i18n, time) + src/main (store, attachments)
+               i18n, time) + src/main (store, attachments, mcp)
 packaging/     icons + Mac App Store entitlements (electron-builder
                buildResources)
 ```
@@ -206,6 +212,34 @@ packaging/     icons + Mac App Store entitlements (electron-builder
   UI text is translated — user content and LLM replies never are;
   product-created defaults (Simple Jack, "Agent N", session titles) are
   materialised once in the current language at creation and then frozen.
+- **MCP server** (`src/main/mcp.ts`, `mcp-tools.ts`, `src/mcp/bridge.ts`):
+  local clients (Claude, LM Studio, Ollama front-ends) compose the council.
+  The app owns `strophae.json`, so the protocol runs in the **main
+  process**, next to the store, on a local socket (`mcpEndpoint()`:
+  `<userData>/mcp.sock`, chmod 600, or `\\.\pipe\strophae-mcp-<user>` on
+  Windows; `STROPHAE_MCP_ENDPOINT` overrides it, for tests). A client never
+  dials it: it spawns the **bridge** — the app's own binary with
+  `ELECTRON_RUN_AS_NODE=1` (explicitly `1`, which also beats whatever the
+  client inherited) on `dist/mcp/bridge.js` inside app.asar — which relays
+  stdin/stdout to the socket and, finding nobody there, spawns the app
+  detached and polls for up to 30 s. Settings shows the exact `mcpServers`
+  lines for the install (`mcp:config`). The protocol is hand-written
+  (newline-delimited JSON-RPC 2.0, tools capability only, revisions in
+  `PROTOCOL_VERSIONS`) — no SDK, in keeping with zero runtime deps;
+  `McpSession` is pure and tested directly. The tools act on **the draft**
+  (`getOrCreateDraft`, the compose page the new-session button opens):
+  `compose_council` replaces its lineup (`store.setLineup`, drafts only),
+  plus add/update/remove member, shared prompt, and create/update persona.
+  They never send, read conversations or touch the key — the person
+  commits with the red control. Arguments come from (often small) models,
+  so references are lenient (`lookup`: id → folded name → seed
+  `personaType`, so "black hat" finds the hat in any language → unique
+  prefix) and refusals are tool results (`isError`) naming what would have
+  worked. Each mutation pushes `mcp:changed` to the window: `App.tsx`
+  reloads, follows a council change to its compose page and remounts it
+  (`composeRev` key) so the textareas show what the client wrote. Since a
+  bridge can now start the app, `main.ts` takes the **single-instance
+  lock** (two instances would overwrite each other's `strophae.json`).
 - **--check mode** (`main.ts` + `App.tsx` `runSelfTest`): loads the app
   offscreen with `?check=1`, renderer walks the screens and reports
   `{check: bool}` via `check:ready`; `check:shot` captures PNGs. A 30s
@@ -213,7 +247,9 @@ packaging/     icons + Mac App Store entitlements (electron-builder
   slack is for CI runners). The walk seeds its own content — a
   persisted exchange for the quote checks, then a *fake SSE stream*
   (`globalThis.fetch` stubbed in the renderer, no network) plus a throwaway
-  key for the stop checks. Check mode also keeps that key in memory rather
+  key for the stop checks, and an MCP `compose_council` sent over a socket
+  in the throwaway profile (`check:mcp`, via `exchange`) to prove the push
+  reaches the compose page. Check mode also keeps that key in memory rather
   than in `safeStorage` (`registerIpc`'s `ephemeralKey`): a freshly signed
   build asking the keychain for its item raises a permission prompt, which
   would block the main process with nobody there to answer it.
@@ -243,6 +279,11 @@ electron-builder packages no node_modules.
 
 - Single-user by design; the web era's workspace features (members, roles,
   invites) have no equivalent here.
+- **MCP under the Mac App Store sandbox is untested.** A client would run
+  the sandboxed binary as the bridge, sharing the app's container (so the
+  HOME-derived endpoint still agrees); the container path overflows
+  `sun_path`, hence `mcpEndpoint`'s `~/.strophae-mcp.sock` fallback.
+  Verified: dev and the packaged (Developer ID / ad-hoc) builds.
 - **Attachments**: doc/docx/pdf/md/txt/csv + png/jpg can be attached to the
   shared prompt (`Conversation.attachments`), a single agent's prompt
   (`Agent.attachments`) and chat messages (`Message.attachments`). Files are

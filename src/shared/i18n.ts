@@ -74,6 +74,17 @@ const en = {
   models_hint:
     'The OpenRouter string is sent as the model id — copy it from ' +
     'openrouter.ai/models.',
+  // A local MCP client (Claude, LM Studio, an Ollama front-end) composing
+  // the council: the lines to configure it with, and its edits arriving.
+  mcp_label: 'MCP clients',
+  mcp_hint:
+    'Lets a local client — Claude, LM Studio, an Ollama front-end — ' +
+    'compose the council from your library. Add these lines to its MCP ' +
+    'configuration; it starts strophae when needed.',
+  copy: 'Copy',
+  copied: 'Copied',
+  mcp_council_updated: 'Council composed by a connected client',
+  mcp_library_updated: 'Library updated by a connected client',
   language_updated: 'Language updated',
   session_deleted: 'Session deleted',
   save: 'Save',
@@ -214,6 +225,15 @@ const it: Record<MessageKey, string> = {
   models_hint:
     'La stringa OpenRouter è inviata come id del modello — copiala da ' +
     'openrouter.ai/models.',
+  mcp_label: 'Client MCP',
+  mcp_hint:
+    'Permette a un client locale — Claude, LM Studio, un front-end di ' +
+    'Ollama — di comporre il consiglio dalla tua libreria. Aggiungi queste ' +
+    'righe alla sua configurazione MCP; avvia strophae quando serve.',
+  copy: 'Copia',
+  copied: 'Copiato',
+  mcp_council_updated: 'Consiglio composto da un client collegato',
+  mcp_library_updated: 'Libreria aggiornata da un client collegato',
   language_updated: 'Lingua aggiornata',
   session_deleted: 'Sessione eliminata',
   save: 'Salva',

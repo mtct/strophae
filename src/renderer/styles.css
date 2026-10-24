@@ -810,6 +810,9 @@ textarea::placeholder { font-style: normal; }
 }
 .modal {
   width: 460px;
+  /* Taller than a small window now that it carries the MCP lines. */
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
   background: var(--sheet);
   border: var(--bar) solid var(--ink);
   border-radius: 0;
@@ -885,6 +888,27 @@ textarea::placeholder { font-style: normal; }
 .model-add input { flex: 1; min-width: 0; }
 .model-add input.mono { font-family: var(--mono); font-size: 11.5px; flex: 1.4; }
 .model-add button { width: 34px; flex: none; padding: 6px 0; }
+
+/* The lines a local MCP client is configured with. The app prints them, so
+   a plain sheet, not a writing surface: mono, scrolled rather than wrapped,
+   since a path broken over two lines no longer pastes. */
+.mcp-config {
+  margin: 0;
+  max-height: 132px;
+  overflow: auto;
+  background: var(--sheet-2);
+  border: var(--key) solid var(--ink);
+  border-radius: 0;
+  padding: 8px 10px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  line-height: 1.5;
+  white-space: pre;
+  user-select: text;
+}
+.mcp-row { display: flex; align-items: flex-start; gap: 12px; }
+.mcp-row .hint { flex: 1; }
+.mcp-row button { flex: none; }
 
 /* ---------------------------------------------------------------- menus */
 
