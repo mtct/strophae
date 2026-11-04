@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>strophae — one prompt, many minds</title>
-<meta name="description" content="strophae is a free desktop app for macOS and Windows that broadcasts one prompt to a council of AI agents — each with its own model, persona and colour — and streams every answer side by side.">
+<meta name="description" content="strophae is a free desktop app for macOS and Windows that broadcasts one prompt to a council of AI agents — each with its own model, persona and colour — and streams every answer side by side. Cloud models through OpenRouter or local ones through Ollama, and Claude can seat the council for you over MCP.">
 <meta property="og:title" content="strophae — one prompt, many minds">
 <meta property="og:description" content="A desktop app that sends one prompt to several AI agents at once and streams their answers in parallel columns. Free, open source, local-first.">
 <meta property="og:image" content="https://mtct.github.io/strophae/icon.png">
@@ -391,6 +391,7 @@
     <div class="nav-links">
       <a class="nav-a" href="#download">download</a>
       <a class="nav-a" href="#features">features</a>
+      <a class="nav-a" href="#mcp">mcp</a>
       <a class="nav-a" href="#screenshots">screenshots</a>
       <a class="nav-a" href="#privacy">privacy</a>
       <a class="nav-a" href="#source">run it</a>
@@ -424,7 +425,8 @@
           <a class="btn btn-fill" href="https://github.com/mtct/strophae/releases/latest/download/Strophae-macos-arm64.dmg">download for macos</a>
           <a class="btn" href="https://github.com/mtct/strophae/releases/latest/download/Strophae-windows-x64-setup.exe">download for windows</a>
           <span class="fine">Apple Silicon · Windows 10/11 64-bit · MIT licensed. Your OpenRouter
-          key, your data, on your machine. <a href="#download">zips, checksums &amp; first launch</a></span>
+          key — or none, with local models — and your data, on your machine.
+          <a href="#download">zips, checksums &amp; first launch</a></span>
         </div>
       </div>
 
@@ -510,24 +512,78 @@
         </div>
         <div class="cell">
           <p class="label"><span class="mark tri c-yellow"></span>models</p>
-          <h3>any model, one key — or none</h3>
-          <p>OpenRouter carries GPT, Claude, Gemini, Llama, DeepSeek, Mistral and hundreds more. Or run your own with Ollama, LM Studio or llama.cpp: local models need no key, and a council can mix both.</p>
+          <h3>any model, one key</h3>
+          <p>OpenRouter carries GPT, Claude, Gemini, Llama, DeepSeek, Mistral and hundreds more. The model list is yours to edit in Settings.</p>
         </div>
         <div class="cell">
-          <p class="label"><span class="mark c-red"></span>attachments</p>
+          <p class="label"><span class="mark c-red"></span>local models</p>
+          <h3>your own models, no key</h3>
+          <p>Run models on your machine with Ollama, LM Studio or llama.cpp. A council of local models needs no key, what you send them stays on your network, and a council can mix them with the cloud.</p>
+        </div>
+        <div class="cell">
+          <p class="label"><span class="mark tri c-yellow"></span>quoting</p>
+          <h3>put one voice to all</h3>
+          <p>Select a passage in any column and lift it into the next prompt, attributed, so the whole council answers what one of them said.</p>
+        </div>
+        <div class="cell">
+          <p class="label"><span class="mark circle c-blue"></span>stopping</p>
+          <h3>cut any voice short</h3>
+          <p>Stop one rambling column from its header, or the whole chorus from the composer. Whatever was said so far stays in the thread.</p>
+        </div>
+        <div class="cell">
+          <p class="label"><span class="mark tri c-yellow"></span>attachments</p>
           <h3>bring your documents</h3>
           <p>PDF, Word, Markdown, CSV and images attach to the shared context, to a single agent's brief, or to one message.</p>
         </div>
         <div class="cell">
-          <p class="label"><span class="mark tri c-yellow"></span>rich replies</p>
+          <p class="label"><span class="mark circle c-blue"></span>rich replies</p>
           <h3>beyond plain text</h3>
           <p>Mermaid fences render as real diagrams inside the column. Image models paint into the conversation, audio models speak.</p>
         </div>
         <div class="cell">
-          <p class="label"><span class="mark circle c-blue"></span>languages</p>
+          <p class="label"><span class="mark c-red"></span>languages</p>
           <h3>in your language</h3>
           <p>The interface speaks English and Italian and follows your OS. Your words and the models' replies are never translated behind your back.</p>
         </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec s-red" id="mcp">
+    <div class="wrap">
+      <div class="rule">
+        <p class="label"><span class="mark c-red"></span>mcp</p>
+      </div>
+      <h2>let your assistant seat the council</h2>
+      <p class="sec-lede">strophae speaks the Model Context Protocol. Tell Claude — or LM
+      Studio, or an Ollama front-end — who should sit at the table, and it lays the
+      council out from your persona library.</p>
+      <div class="grid2">
+        <div>
+          <p>The assistant gets a handful of tools: read the <b>persona library</b> and
+          the models, create and edit personas, and <b>compose the council</b> — the
+          shared prompt every member reads, then each member's own brief, model and
+          colour.</p>
+          <p>The council appears on the compose page as it is built. You read it, change
+          what you like and press <b>start chatting</b> yourself: no tool sends a prompt,
+          reads your conversations or touches your key.</p>
+          <p><b>Settings → MCP clients</b> has the exact lines for your install, with a
+          copy button, and the app starts on its own when the assistant needs it. The
+          <a href="https://github.com/mtct/strophae#compose-from-an-mcp-client">README</a>
+          lists every tool.</p>
+        </div>
+        <pre class="term"><span class="c"># you, in claude</span>
+seat the black and green hats and a
+sceptical accountant. shared context:
+we are pricing a new product.
+
+<span class="c"># claude, through strophae's tools</span>
+list_personas
+compose_council
+  3 members, one shared prompt
+
+<span class="c"># → laid out on the compose page,</span>
+<span class="c">#   ready for you to start</span></pre>
       </div>
     </div>
   </section>
@@ -586,7 +642,7 @@
       <div class="facts">
         <div class="fact">
           <h3>local by design</h3>
-          <p>Sessions, agents and attachments live in a single JSON document in your user folder. Delete the folder and strophae never knew you.</p>
+          <p>Sessions, agents and attachments live in a single JSON document in your user folder. Delete the folder and strophae never knew you. An MCP client reaches the app through a local socket only your account can open.</p>
         </div>
         <div class="fact">
           <h3>your key, in the keychain</h3>
@@ -657,7 +713,8 @@
           <a href="https://bun.sh">Bun</a>: clone, install, start.</p>
           <p>To talk to real models, open <b>Settings</b> and paste an OpenRouter key
           (<code>sk-or-…</code>, from <a href="https://openrouter.ai/keys">openrouter.ai/keys</a>)
-          — or point it at <a href="https://ollama.com">Ollama</a> and use local models with no key at all.</p>
+          — or point it at <a href="https://ollama.com">Ollama</a> and use local models with no key at all.
+          <b>Settings → MCP clients</b> gives Claude the lines to compose councils for you.</p>
           <p>You do not have to: the <a href="#download">packaged builds</a> are one click away.
           Mac App Store and Microsoft Store releases are on the way, documented in
           <a href="https://github.com/mtct/strophae/blob/main/PACKAGING.md">PACKAGING.md</a>.</p>

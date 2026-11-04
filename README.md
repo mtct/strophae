@@ -14,9 +14,10 @@ parallel, streaming live in their own columns.
 Bun and React**. Real model responses stream through
 [OpenRouter](https://openrouter.ai) directly from the app — or from models you
 run yourself with [Ollama](https://ollama.com), LM Studio or llama.cpp, with no
-key and no account. Your OpenRouter key is stored encrypted with the OS
-keychain (Electron `safeStorage`) and is only ever sent to OpenRouter. All
-data lives locally in your user data folder.
+key and no account. An assistant such as Claude can even seat the council for
+you, over [MCP](#compose-from-an-mcp-client). Your OpenRouter key is stored
+encrypted with the OS keychain (Electron `safeStorage`) and is only ever sent
+to OpenRouter. All data lives locally in your user data folder.
 
 → [Project page](https://mtct.github.io/strophae/)
 
@@ -58,10 +59,15 @@ bun run dist            # package with electron-builder (release/)
 
 - **Compose** a "council" of agents (name, colour, model, system prompt) plus an
   optional shared context applied to every agent. Save agents as reusable
-  **personas** — the Six Thinking Hats ship as a starter library.
+  **personas** — the Six Thinking Hats ship as a starter library — or let an
+  assistant compose the council for you [over MCP](#compose-from-an-mcp-client).
 - **Chat** broadcasts each prompt to every agent in parallel; responses stream
   independently per column, one request per agent — to OpenRouter, or to your
-  own local model server. A council can mix both.
+  own [local model server](#local-models). A council can mix both.
+- **Quote** a passage: select it in one column and lift it into the next
+  prompt, attributed, so the whole council answers what one voice said.
+- **Stop** a reply mid-stream — one column from its header, or every voice
+  from the composer. Whatever was said so far stays in the thread.
 - **Rich replies**: markdown with tables and task lists, ` ```mermaid ` fences
   rendered as diagrams, plus image and audio output for models that support it.
 - **Attachments**: doc/docx/pdf/md/txt/csv and images, attached to the shared
@@ -95,7 +101,7 @@ share one machine, so they answer in turn rather than all at once — Ollama's
 strophae is also a [Model Context Protocol](https://modelcontextprotocol.io)
 server, so a local client — Claude Desktop, Claude Code, LM Studio, an Ollama
 front-end with MCP support — can set up the council for you: *"put the black
-and green hats and a skeptical accountant on it, shared context: we are
+and green hats and a sceptical accountant on it, shared context: we are
 pricing a new product"*. The client's model gets these tools:
 
 | Tool | What it does |
@@ -136,11 +142,10 @@ Everything is local. There is no strophae server, no telemetry and no account
 — the app's only network egress is the OpenRouter API, enforced by the
 renderer's Content Security Policy, plus the local model server you set in
 Settings, which the app accepts only on your computer or your private network.
-Your conversations live in a single JSON
-document in your OS user-data folder, and your API key is encrypted at rest by
-the OS keychain. The MCP endpoint is not a network listener: it is a local
-socket under your own user account (a named pipe on Windows), reachable only by
-programs you run.
+Your conversations live in a single JSON document in your OS user-data folder,
+and your API key is encrypted at rest by the OS keychain. The MCP endpoint is
+not a network listener: it is a local socket under your own user account (a
+named pipe on Windows), reachable only by programs you run.
 
 ## Distribution
 
