@@ -78,7 +78,13 @@ function AgentCard(props: {
           {!props.models.some((m) => m.label === agent.model) && (
             <option key={agent.model}>{agent.model}</option>
           )}
-          {props.models.map((m) => <option key={m.label}>{m.label}</option>)}
+          {props.models.map((m) => (
+            <option key={m.label} value={m.label}>
+              {m.provider === 'local'
+                ? `${m.label} · ${t('provider_local').toLowerCase()}`
+                : m.label}
+            </option>
+          ))}
         </select>
         <label className="modality-row">
           <span>{t('modality_label')}</span>

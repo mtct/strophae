@@ -355,15 +355,17 @@ export function councilTools(store: Store,
     {
       name: 'list_models',
       title: 'List models',
-      description: "List the models configured in Strophae's settings, as "
-        + 'label and OpenRouter id, and the default one. A model is given '
-        + 'by its label; any other OpenRouter id ("provider/model") works '
-        + 'too.',
+      description: "List the models configured in Strophae's settings — "
+        + 'label, model id, and provider: "openrouter" (the cloud, needs '
+        + "the user's key) or \"local\" (their own server, e.g. Ollama) — "
+        + 'and the default one. A model is given by its label; any other '
+        + 'OpenRouter id ("provider/model") works too.',
       inputSchema: schema(),
       annotations: READ_ONLY,
       run: () => ({
-        models: store.settings().models.map((m) => (
-          { label: m.label, openrouter_id: m.slug })),
+        models: store.settings().models.map((m) => ({
+          label: m.label, id: m.slug, provider: m.provider ?? 'openrouter',
+        })),
         default: store.defaultModel(),
       }),
     },

@@ -510,8 +510,8 @@
         </div>
         <div class="cell">
           <p class="label"><span class="mark tri c-yellow"></span>models</p>
-          <h3>any model, one key</h3>
-          <p>OpenRouter carries GPT, Claude, Gemini, Llama, DeepSeek, Mistral and hundreds more. The model list is yours to edit in Settings.</p>
+          <h3>any model, one key — or none</h3>
+          <p>OpenRouter carries GPT, Claude, Gemini, Llama, DeepSeek, Mistral and hundreds more. Or run your own with Ollama, LM Studio or llama.cpp: local models need no key, and a council can mix both.</p>
         </div>
         <div class="cell">
           <p class="label"><span class="mark c-red"></span>attachments</p>
@@ -594,7 +594,7 @@
         </div>
         <div class="fact">
           <h3>one outbound host</h3>
-          <p>The renderer's Content-Security-Policy allows exactly one network destination: <code>openrouter.ai</code>. Nothing else leaves the app.</p>
+          <p>The renderer's Content-Security-Policy allows exactly one internet destination: <code>openrouter.ai</code>. Local models are reached only on your own computer or network. Nothing else leaves the app.</p>
         </div>
       </div>
     </div>
@@ -656,7 +656,8 @@
           <p>strophae is built with <b>Electron, Bun and React</b>. All you need is
           <a href="https://bun.sh">Bun</a>: clone, install, start.</p>
           <p>To talk to real models, open <b>Settings</b> and paste an OpenRouter key
-          (<code>sk-or-…</code>, from <a href="https://openrouter.ai/keys">openrouter.ai/keys</a>).</p>
+          (<code>sk-or-…</code>, from <a href="https://openrouter.ai/keys">openrouter.ai/keys</a>)
+          — or point it at <a href="https://ollama.com">Ollama</a> and use local models with no key at all.</p>
           <p>You do not have to: the <a href="#download">packaged builds</a> are one click away.
           Mac App Store and Microsoft Store releases are on the way, documented in
           <a href="https://github.com/mtct/strophae/blob/main/PACKAGING.md">PACKAGING.md</a>.</p>

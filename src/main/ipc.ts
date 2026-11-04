@@ -6,13 +6,14 @@ import { readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 
 import {
-  app, BrowserWindow, dialog, ipcMain, safeStorage, shell,
+  app, BrowserWindow, dialog, ipcMain, net, safeStorage, shell,
 } from 'electron';
 
 import { translate } from '../shared/i18n';
 import type {
   AppState, Attachment, Language, McpClientConfig, ModelEntry,
 } from '../shared/types';
+import { listLocalModels } from './local';
 import {
   copyAttachmentTo,
   deleteAttachmentFiles,
@@ -156,6 +157,12 @@ export function registerIpc(store: Store, dir: string,
     store.setLanguage(language));
   ipcMain.handle('settings:setModels', (_e, models: ModelEntry[]) =>
     store.setModels(models));
+  ipcMain.handle('settings:setLocalServer', (_e, url: string) =>
+    store.setLocalServer(url));
+  // Settings' "find models": what the local server at `url` (as typed, not
+  // yet saved) offers. net.fetch, like the chat requests (local.ts).
+  ipcMain.handle('local:models', (_e, url: string) =>
+    listLocalModels(url, net.fetch));
   ipcMain.handle('apikey:get', () =>
     (options.ephemeralKey ? ephemeralKey : loadApiKey(dir)));
   ipcMain.handle('apikey:set', (_e, value: string) => {

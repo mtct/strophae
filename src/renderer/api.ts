@@ -6,6 +6,7 @@ import type {
   Attachment,
   Conversation,
   Language,
+  LocalModels,
   McpChange,
   McpClientConfig,
   ModelEntry,
@@ -51,6 +52,10 @@ export interface StrophaeApi {
   detachFromAgent(agentId: number, attId: number): Promise<Agent>;
   setLanguage(language: Language): Promise<void>;
   setModels(models: ModelEntry[]): Promise<Settings>;
+  /** Point local models at a server; rejects one off the local network. */
+  setLocalServer(url: string): Promise<Settings>;
+  /** The models the local server at `url` offers (Settings' find models). */
+  localModels(url: string): Promise<LocalModels>;
   getApiKey(): Promise<string>;
   setApiKey(value: string): Promise<void>;
   /** Open a web/mail link in the OS browser (validated main-side). */
@@ -63,6 +68,8 @@ export interface StrophaeApi {
   checkReady(report: Record<string, boolean>): Promise<void>;
   /** Self-test only: compose a council over the MCP socket; the replies. */
   checkMcp(): Promise<unknown[]>;
+  /** Self-test only: the address of a stand-in local model server. */
+  checkLocalServer(): Promise<string>;
 }
 
 declare global {

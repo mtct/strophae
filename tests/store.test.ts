@@ -553,6 +553,37 @@ describe('model settings', () => {
       [{ label: 'Kimi K2', slug: 'moonshotai/kimi-k2' }]);
   });
 
+  test('a local model keeps its provider through a save', () => {
+    store.setModels([
+      { label: 'Qwen', slug: 'qwen3:8b', provider: 'local' },
+      { label: 'GPT-4o', slug: 'openai/gpt-4o' },
+    ]);
+    store.flush();
+    expect(openStore('en', dir).settings().models).toEqual([
+      { label: 'Qwen', slug: 'qwen3:8b', provider: 'local' },
+      { label: 'GPT-4o', slug: 'openai/gpt-4o' },
+    ]);
+  });
+
+  test('the local server defaults to Ollama and stays on the local network',
+    () => {
+      expect(store.settings().localServer).toBe('http://localhost:11434/v1');
+      store.setLocalServer('http://127.0.0.1:1234');
+      expect(store.settings().localServer).toBe('http://127.0.0.1:1234/v1');
+      expect(() => store.setLocalServer('https://example.com/v1'))
+        .toThrow('local_url_invalid');
+      expect(store.settings().localServer).toBe('http://127.0.0.1:1234/v1');
+    });
+
+  test('a document from before local models gets the default server', () => {
+    writeFileSync(join(dir, 'strophae.json'), JSON.stringify({
+      nextId: 1, conversations: [], personas: [],
+      settings: { language: '', models: [{ label: 'X', slug: 'x/y' }] },
+    }));
+    expect(openStore('en', dir).settings().localServer)
+      .toBe('http://localhost:11434/v1');
+  });
+
   test('an empty list is rejected', () => {
     expect(() => store.setModels([{ label: ' ', slug: '' }])).toThrow();
   });

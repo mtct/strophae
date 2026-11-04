@@ -41,7 +41,9 @@ const en = {
   stop_all: 'Stop',
   stop_generation: 'Stop this reply',
   stopped: 'Stopped',
-  need_key: 'Add your OpenRouter API key in Settings first',
+  need_key:
+    'Add your OpenRouter API key in Settings first — or give every agent ' +
+    'a local model',
   clear_thread: 'Clear thread',
   thread_cleared: 'Thread cleared',
   expand_chat: 'Expand to full window',
@@ -74,6 +76,25 @@ const en = {
   models_hint:
     'The OpenRouter string is sent as the model id — copy it from ' +
     'openrouter.ai/models.',
+  // Local models: an OpenAI-compatible server (Ollama, LM Studio,
+  // llama.cpp) on this machine or the private network, used without a key.
+  local_label: 'Local server',
+  local_hint:
+    'An OpenAI-compatible server on this computer or your network: Ollama ' +
+    'answers at http://localhost:11434/v1, LM Studio at ' +
+    'http://localhost:1234/v1. Local models need no API key, and what you ' +
+    'send them stays on your network.',
+  find_models: 'Find models',
+  finding_models: 'Looking…',
+  local_none:
+    'The server lists no models yet — download one first (ollama pull …).',
+  local_unreachable: 'No local model server answers at {url}',
+  local_url_invalid:
+    'Use an http address on this computer or your local network',
+  add_this_model: 'Add this model',
+  provider_openrouter: 'OpenRouter',
+  provider_local: 'Local',
+  model_local_placeholder: 'Model name on the server, e.g. qwen3:8b',
   // A local MCP client (Claude, LM Studio, an Ollama front-end) composing
   // the council: the lines to configure it with, and its edits arriving.
   mcp_label: 'MCP clients',
@@ -192,7 +213,9 @@ const it: Record<MessageKey, string> = {
   stop_all: 'Interrompi',
   stop_generation: 'Interrompi questa risposta',
   stopped: 'Interrotto',
-  need_key: 'Aggiungi prima la tua chiave API OpenRouter nelle Impostazioni',
+  need_key:
+    'Aggiungi prima la tua chiave API OpenRouter nelle Impostazioni — o ' +
+    'dai a ogni agente un modello locale',
   clear_thread: 'Svuota il thread',
   thread_cleared: 'Thread svuotato',
   expand_chat: 'Allarga a tutta finestra',
@@ -225,6 +248,24 @@ const it: Record<MessageKey, string> = {
   models_hint:
     'La stringa OpenRouter è inviata come id del modello — copiala da ' +
     'openrouter.ai/models.',
+  local_label: 'Server locale',
+  local_hint:
+    'Un server compatibile OpenAI su questo computer o nella tua rete: ' +
+    'Ollama risponde a http://localhost:11434/v1, LM Studio a ' +
+    'http://localhost:1234/v1. I modelli locali non chiedono una chiave ' +
+    'API e ciò che invii loro resta nella tua rete.',
+  find_models: 'Trova modelli',
+  finding_models: 'Cerco…',
+  local_none:
+    'Il server non elenca ancora modelli — scaricane uno prima ' +
+    '(ollama pull …).',
+  local_unreachable: 'Nessun server di modelli locale risponde a {url}',
+  local_url_invalid:
+    'Usa un indirizzo http su questo computer o nella tua rete locale',
+  add_this_model: 'Aggiungi questo modello',
+  provider_openrouter: 'OpenRouter',
+  provider_local: 'Locale',
+  model_local_placeholder: 'Nome del modello sul server, es. qwen3:8b',
   mcp_label: 'Client MCP',
   mcp_hint:
     'Permette a un client locale — Claude, LM Studio, un front-end di ' +

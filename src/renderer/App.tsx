@@ -281,7 +281,59 @@ export function App() {
     report['settings mcp snippet'] = (document.querySelector(
       '.modal .mcp-config')?.textContent ?? '').includes('bridge.js');
     await api.checkShot('settings');
-    setSettingsOpen(false);
+    // A local model, end to end: point Settings at a stand-in server, find
+    // its model, add it and save — then the council answers through
+    // strophae-local: and the main process, with no API key set at all.
+    {
+      const pause = (ms: number) => new Promise((r) => setTimeout(r, ms));
+      // Type the way a person does, so React's onChange sees it.
+      const type = (el: HTMLInputElement | HTMLTextAreaElement | null,
+                    value: string) => {
+        if (!el) return;
+        const proto = el instanceof HTMLTextAreaElement
+          ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+        Object.getOwnPropertyDescriptor(proto, 'value')!.set!.call(el, value);
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      };
+      type(document.querySelector('.modal .local-row input'),
+        await api.checkLocalServer());
+      await pause(50);
+      document.querySelector<HTMLButtonElement>(
+        '.modal .local-row button')?.click();
+      await pause(500);
+      report['settings finds local models'] = document.querySelector(
+        '.modal .found-models .model-name')?.textContent === 'check-local:1b';
+      document.querySelector<HTMLButtonElement>(
+        '.modal .found-models .model-row button')?.click();
+      await pause(100);
+      report['a found model joins the list as local'] = Array.from(
+        document.querySelectorAll(
+          '.modal .model-list:not(.found-models) .model-row'))
+        .some((row) => (row.textContent ?? '').includes('check-local:1b')
+          && row.querySelector('.model-tag') !== null);
+      await api.checkShot('settings-local');
+      document.querySelector<HTMLButtonElement>(
+        '.modal .actions button.accent')?.click();
+      await pause(300);
+      // The council the MCP check laid out, every voice on the local model.
+      const council = await api.getDraft();
+      for (const agent of council.agents) {
+        await api.updateAgent(agent.id, { model: 'check-local:1b' });
+      }
+      await reload();
+      setView({ page: 'chat', convId: council.id });
+      await pause(250);
+      type(document.querySelector('.input-row textarea'), 'Name the bakery.');
+      await pause(50);
+      document.querySelector<HTMLButtonElement>(
+        '.input-row button.accent')?.click();
+      await pause(1500);
+      report['a local model answers with no key'] = Array.from(
+        document.querySelectorAll('.msg-assistant'))
+        .filter((el) => (el.textContent ?? '').includes('a local voice answers'))
+        .length === council.agents.length;
+      await api.checkShot('chat-local');
+    }
     await api.checkReady(report);
   }
 
@@ -334,6 +386,7 @@ export function App() {
           t={t}
           language={state.settings.language}
           models={state.settings.models}
+          localServer={state.settings.localServer}
           onClose={() => setSettingsOpen(false)}
           onSaved={async (languageChanged) => {
             setSettingsOpen(false);

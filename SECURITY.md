@@ -25,8 +25,14 @@ interesting surface is narrow:
   there is no `nodeIntegration`; anything that reaches Node from the renderer
   outside the typed preload bridge (`window.strophae`) is in scope.
 - **Network egress beyond openrouter.ai** — the CSP in
-  `src/renderer/index.html` limits `connect-src` to the OpenRouter API.
+  `src/renderer/index.html` limits `connect-src` to the OpenRouter API and
+  the `strophae-local:` scheme. The main process forwards that scheme to the
+  local model server set in Settings, and only to one on loopback or the
+  private network (`isLocalServer`), and only its chat-completions path.
   Anything that exfiltrates data elsewhere is in scope.
+- **Local endpoints** — the MCP socket is reachable only by the user's own
+  account and lets a client compose councils, never send prompts or read
+  conversations. A way past either limit is in scope.
 - **Injection via model output** — replies are untrusted input. Raw HTML is
   escaped (no `rehype-raw`) and mermaid runs sandboxed; a bypass of either is
   in scope, as is any path where a reply causes code execution or navigation.

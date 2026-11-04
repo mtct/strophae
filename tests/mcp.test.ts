@@ -145,7 +145,7 @@ describe('library', () => {
     const models = ok('list_models');
     expect(models.default).toBe('DeepSeek 4 Flash');
     expect(models.models[0]).toEqual(
-      { label: 'GPT-4o', openrouter_id: 'openai/gpt-4o' });
+      { label: 'GPT-4o', id: 'openai/gpt-4o', provider: 'openrouter' });
   });
 
   test('create_persona saves it to the library', () => {

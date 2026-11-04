@@ -38,7 +38,9 @@ whole window still reads as a page.
 **Electron** hosts the app (main process = data layer, sandboxed renderer =
 React UI); **React 19** + plain CSS (no Tailwind, no CDN — the app is fully
 self-contained; the only network egress is the OpenRouter API, enforced by
-the renderer CSP in `src/renderer/index.html`).
+the renderer CSP in `src/renderer/index.html`, plus the user's own local model
+server, reached through the main process and only on loopback or the private
+network).
 
 - Install: `bun install` (Electron's binary download is a trusted
   postinstall — see `trustedDependencies` in package.json).
@@ -80,13 +82,15 @@ src/main/      main.ts (window, --check mode, single-instance lock) ·
                store.ts (persistence) · ipc.ts (IPC surface + safeStorage
                API key) · attachments.ts (file import/extraction + payload
                files + GC) · mcp.ts (MCP JSON-RPC session, local socket,
-               mcpEndpoint) · mcp-tools.ts (the council tools)
+               mcpEndpoint) · mcp-tools.ts (the council tools) · local.ts
+               (strophae-local: → the local model server; listLocalModels)
 src/mcp/       bridge.ts (stdio ↔ socket relay a client runs; starts the
                app when it is not running)
 src/preload/   preload.ts (contextBridge → window.strophae)
 src/renderer/  React app: App.tsx (state, view routing, toasts) ·
                components/ (Sidebar, ComposePage, ChatPage, SettingsModal) ·
-               api.ts (typed preload bridge) · openrouter.ts (SSE streaming) ·
+               api.ts (typed preload bridge) · openrouter.ts (SSE streaming,
+               to OpenRouter or the local server; withoutFiles) ·
                theme.ts (oklch poster ink per hue — lightness *follows* the
                hue, so a yellow prints light and a blue dark instead of
                every accent flattening to mud; a column publishes it as the
@@ -95,7 +99,7 @@ src/renderer/  React app: App.tsx (state, view routing, toasts) ·
 scripts/       bundle.ts (Bun.build for main/preload/mcp bridge/renderer +
                static copy)
 tests/         bun test suites for src/shared (audio, models, fences,
-               i18n, time) + src/main (store, attachments, mcp)
+               i18n, time) + src/main (store, attachments, mcp, local)
 packaging/     icons + Mac App Store entitlements (electron-builder
                buildResources)
 ```
@@ -113,7 +117,8 @@ packaging/     icons + Mac App Store entitlements (electron-builder
   model's own latency staggers them — image/audio models don't stream
   progressively, so those columns fill at the end) → `msg:finalize` writes
   each slot's full text (or `⚠ error`). The main process never calls
-  OpenRouter.
+  OpenRouter (it only forwards local-model requests, see below). The key is
+  asked for only when some agent's model routes to OpenRouter.
 - **Quoting across the council** (`src/shared/quote.ts` + ChatPage): a text
   selection inside one column raises a small control under it (the voice's
   colour as a solid square, never red — Send is the stamped control here),
@@ -156,7 +161,8 @@ packaging/     icons + Mac App Store entitlements (electron-builder
   call OpenRouter directly.
 - **Security posture**: `contextIsolation` + `sandbox` on, no
   `nodeIntegration`; renderer talks only through the typed preload bridge
-  (`window.strophae`); strict CSP (connect-src limited to openrouter.ai).
+  (`window.strophae`); strict CSP (connect-src limited to openrouter.ai and
+  the `strophae-local:` scheme).
 - **Persona library**: `store.seedPersonas()` materialises the Six Thinking
   Hats (`src/shared/personas.ts`) once per document — names/prompts
   translated at seed time in the current language, one palette hue per hat
@@ -173,12 +179,40 @@ packaging/     icons + Mac App Store entitlements (electron-builder
   still equal the canonical text in some `SEED_LANGS` catalog) into the new
   language — anything the user renamed/re-prompted or created themselves is
   matched by neither test and left untouched.
-- **Models are user-configurable**: `Settings.models` (label + OpenRouter
-  string) is seeded from `DEFAULT_MODELS` and edited in the Settings modal
+- **Models are user-configurable**: `Settings.models` (label + model
+  string, plus `provider: 'local'` for a local model — absent means
+  OpenRouter) is seeded from `DEFAULT_MODELS` and edited in the Settings modal
   (add/remove; at least one entry, `settings:setModels`). Slug resolution
   at request time: configured list → seed defaults → the label itself, so
   agents referencing a removed model keep working and a raw OpenRouter
   string works as a label.
+- **Local models** (`src/main/local.ts`, `modelRoute`/`isLocalServer` in
+  `src/shared/models.ts`): any OpenAI-compatible server — Ollama (default
+  `Settings.localServer`, `http://localhost:11434/v1`), LM Studio, llama.cpp,
+  vLLM — stands in for OpenRouter on the models marked local. The renderer
+  never calls it: `streamAgent({provider:'local'})` fetches
+  `strophae-local://server/chat/completions` (no key, `withoutFiles` turns
+  PDF parts into a note, idle watchdog 10 min since local servers send no
+  keepalives while loading or queueing), and the main process answers that
+  privileged scheme (`protocol.handle`, registered before ready with
+  `supportFetchAPI` + `stream`) with `forwardToLocal`: POST to the configured
+  server via `net.fetch` (Chromium's stack — undici's 5-minute headers
+  timeout would cut a slow model load), body streamed back as it comes,
+  errors as OpenAI-shaped JSON in the UI language (unreachable = 502, so
+  `streamAgent` retries a server still starting). Hence: the CSP names no
+  local host, no server needs CORS (LM Studio refuses it by default, Ollama
+  refuses a file:// origin), and the renderer reaches one path on one
+  server. A stop must close the upstream connection — how these servers
+  know to stop generating — and nothing does that by itself: `net.fetch`
+  does not abort when its body is cancelled, and the protocol `Request`'s
+  `signal` never fires. So `relay` wraps the body and aborts the upstream
+  request from its `cancel()` (a stop during model load lands as the reply
+  begins). `isLocalServer` (renderer and
+  main both check it) admits only loopback, private/link-local addresses
+  and LAN names (one label, .local/.lan/.home.arpa/.internal): a public
+  "local" server would be egress past the CSP. Settings: address field,
+  **find models** (`local:models` → `GET /models`, from the address as
+  typed) adds a model with **+**, and the add row has a provider select.
 - **Rich assistant replies**: replies render as **markdown**
   (`components/Markdown.tsx` — react-markdown + remark-gfm for
   tables/task-lists/strikethrough + remark-breaks so single newlines stay
@@ -249,7 +283,9 @@ packaging/     icons + Mac App Store entitlements (electron-builder
   (`globalThis.fetch` stubbed in the renderer, no network) plus a throwaway
   key for the stop checks, and an MCP `compose_council` sent over a socket
   in the throwaway profile (`check:mcp`, via `exchange`) to prove the push
-  reaches the compose page. Check mode also keeps that key in memory rather
+  reaches the compose page, and a stand-in OpenAI-compatible server in main
+  (`check:localServer`) that the walk points Settings at, finds a model on,
+  adds, and hears answer — with no key set — through `strophae-local:`. Check mode also keeps that key in memory rather
   than in `safeStorage` (`registerIpc`'s `ephemeralKey`): a freshly signed
   build asking the keychain for its item raises a permission prompt, which
   would block the main process with nobody there to answer it.

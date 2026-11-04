@@ -5,7 +5,7 @@
 import { afterEach, describe, expect, test } from 'bun:test';
 
 import {
-  foldSystemIntoUser, streamAgent, type ChatMessage,
+  foldSystemIntoUser, streamAgent, withoutFiles, type ChatMessage,
 } from '../src/renderer/openrouter';
 
 describe('foldSystemIntoUser', () => {
@@ -322,5 +322,63 @@ describe('streamAgent stops on demand', () => {
       streamAgent('m', [], 'k', () => {},
         { signal: stop.signal, idleTimeoutMs: 20, maxAttempts: 1 }),
     ).rejects.toThrow('timeout');
+  });
+});
+
+describe('streamAgent to a local model', () => {
+  const realFetch = globalThis.fetch;
+  afterEach(() => { globalThis.fetch = realFetch; });
+
+  // Record each request, answer with one token.
+  function recordingFetch(seen: { url: string; init: RequestInit }[]): void {
+    globalThis.fetch = ((url: string, init: RequestInit) => {
+      seen.push({ url, init });
+      return Promise.resolve(new Response(
+        'data: {"choices":[{"delta":{"content":"ok"}}]}\n\ndata: [DONE]\n\n',
+        { status: 200 }));
+    }) as unknown as typeof fetch;
+  }
+
+  test('goes to strophae-local: with no key, OpenRouter with it', async () => {
+    const seen: { url: string; init: RequestInit }[] = [];
+    recordingFetch(seen);
+    const tokens: string[] = [];
+    await streamAgent('qwen3:8b', [{ role: 'user', content: 'hi' }], 'sk-or-x',
+      (t) => tokens.push(t), { provider: 'local' });
+    await streamAgent('openai/gpt-4o', [{ role: 'user', content: 'hi' }],
+      'sk-or-x', (t) => tokens.push(t));
+    expect(tokens).toEqual(['ok', 'ok']);
+
+    expect(seen[0]!.url).toBe('strophae-local://server/chat/completions');
+    const localHeaders = seen[0]!.init.headers as Record<string, string>;
+    expect(localHeaders.Authorization).toBeUndefined();
+    expect(JSON.stringify(seen[0]!.init)).not.toContain('sk-or-x');
+    expect(JSON.parse(seen[0]!.init.body as string).model).toBe('qwen3:8b');
+
+    expect(seen[1]!.url).toBe('https://openrouter.ai/api/v1/chat/completions');
+    expect((seen[1]!.init.headers as Record<string, string>).Authorization)
+      .toBe('Bearer sk-or-x');
+  });
+
+  test('a PDF part becomes a note the local model can read', async () => {
+    const seen: { url: string; init: RequestInit }[] = [];
+    recordingFetch(seen);
+    const messages: ChatMessage[] = [{
+      role: 'user',
+      content: [
+        { type: 'text', text: 'summarise' },
+        { type: 'file', file: { filename: 'report.pdf', file_data: 'data:application/pdf;base64,AA' } },
+        { type: 'image_url', image_url: { url: 'data:image/png;base64,AA' } },
+      ],
+    }];
+    await streamAgent('llava', messages, '', () => {}, { provider: 'local' });
+    const sent = JSON.parse(seen[0]!.init.body as string).messages[0].content;
+    expect(sent.map((p: { type: string }) => p.type))
+      .toEqual(['text', 'text', 'image_url']);
+    expect(sent[1].text).toContain('report.pdf was attached but not sent');
+    // The caller's messages are left as they were.
+    expect((messages[0]!.content as { type: string }[])[1]!.type).toBe('file');
+    expect(withoutFiles([{ role: 'user', content: 'plain' }]))
+      .toEqual([{ role: 'user', content: 'plain' }]);
   });
 });

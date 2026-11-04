@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type CSSProperties } from 'react';
 
 import { pcm16ToWav } from '../../shared/audio';
 import { splitFences } from '../../shared/fences';
-import { modelSlug } from '../../shared/models';
+import { modelRoute } from '../../shared/models';
 import { appendQuote, quotePassage } from '../../shared/quote';
 import type {
   Agent, Attachment, Conversation, Message, ModelEntry,
@@ -399,8 +399,14 @@ export function ChatPage(props: {
   async function send() {
     const text = input.trim();
     if ((!text && attached.length === 0) || sending) return;
-    const key = await api.getApiKey();
-    if (!key) {
+    // The key only matters to a council with an OpenRouter voice on it: one
+    // made entirely of local models runs without an account at all.
+    const routes = new Map(conv.agents.map(
+      (a) => [a.id, modelRoute(a.model, props.models)]));
+    const needsKey =
+      [...routes.values()].some((r) => r.provider === 'openrouter');
+    const key = needsKey ? await api.getApiKey() : '';
+    if (needsKey && !key) {
       props.onToast(t('need_key'));
       return;
     }
@@ -447,7 +453,8 @@ export function ChatPage(props: {
     // first await, so every request leaves the renderer in one tick and the
     // columns start together (only the models' own latency staggers them).
     for (const { agent, slotId, payload, buildError } of jobs) {
-      const slug = modelSlug(agent.model, props.models);
+      const route = routes.get(agent.id)
+        ?? modelRoute(agent.model, props.models);
       const stopper = stoppers.current.get(agent.id) ?? new AbortController();
       stoppers.current.set(agent.id, stopper);
       const images: string[] = [];
@@ -455,10 +462,11 @@ export function ChatPage(props: {
       let acc = '';
       const stream = buildError
         ? Promise.reject(buildError)
-        : streamAgent(slug, payload, key, (token) => {
+        : streamAgent(route.slug, payload, key, (token) => {
           acc += token;
           setLive((prev) => ({ ...prev, [slotId]: acc }));
         }, {
+          provider: route.provider,
           modality: agent.modality,
           signal: stopper.signal,
           onImage: (url) => {

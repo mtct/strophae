@@ -1,8 +1,15 @@
-// OpenRouter streaming — the direct TypeScript port of the original web
-// client's streamAgent(): fetch with stream:true, parse SSE lines, emit
-// each delta token. The key goes only to OpenRouter.
+// Chat streaming — the direct TypeScript port of the original web client's
+// streamAgent(): fetch with stream:true, parse SSE lines, emit each delta
+// token. Requests go to OpenRouter, with the key, or — for a model marked
+// local — to the local OpenAI-compatible server (Ollama, LM Studio…), through
+// the main process (src/main/local.ts) and without it. The key goes only to
+// OpenRouter.
 
-import type { Modality } from '../shared/types';
+import { LOCAL_SCHEME } from '../shared/models';
+import type { Modality, Provider } from '../shared/types';
+
+const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
+const LOCAL_URL = `${LOCAL_SCHEME}://server/chat/completions`;
 
 // Multimodal content parts (OpenRouter chat/completions schema): images as
 // base64 data URLs, PDFs as file parts. Text documents never appear as
@@ -59,7 +66,27 @@ export function foldSystemIntoUser(messages: ChatMessage[]): ChatMessage[] {
   return [...rest, { role: 'user', content: systemText }];
 }
 
+/** OpenAI-compatible local servers take text and images, not OpenRouter's
+    file parts: a PDF would fail the whole request. Each one becomes a line
+    telling the model what it is missing, so the rest still gets an answer.
+    Returns a new array; the input is left untouched. */
+export function withoutFiles(messages: ChatMessage[]): ChatMessage[] {
+  return messages.map((m) => (typeof m.content === 'string' ? m : {
+    ...m,
+    content: m.content.map((part): ContentPart => (part.type === 'file'
+      ? {
+        type: 'text',
+        text: `[${part.file.filename} was attached but not sent: this `
+          + 'model reads text and images only.]',
+      }
+      : part)),
+  }));
+}
+
 export interface StreamOptions {
+  /** Where the request goes (default 'openrouter'). 'local' needs no key
+      and sends no file parts (withoutFiles). */
+  provider?: Provider;
   /** What the agent should produce (default 'text'). Drives the request's
       `modalities`: 'image' asks for pictures, 'audio' asks for speech. */
   modality?: Modality;
@@ -73,7 +100,9 @@ export interface StreamOptions {
       is never cut off. OpenRouter emits `: OPENROUTER PROCESSING` keepalive
       comments during long generations (image models compute the whole
       picture before returning), and those bytes rearm the timer too, so
-      this only trips on a genuinely dead connection. Default 120 s. */
+      this only trips on a genuinely dead connection. Default 120 s — and
+      10 min for a local model, which sends no keepalives while it loads
+      into memory or waits behind the rest of the council on one machine. */
   idleTimeoutMs?: number;
   /** Total attempts for a request that fails *before* delivering any output
       — a burst of a dozen personas trips OpenRouter rate limits (429) and
@@ -133,7 +162,8 @@ export async function streamAgent(
   onToken: (token: string) => void,
   options: StreamOptions = {},
 ): Promise<void> {
-  const idleMs = options.idleTimeoutMs ?? 120_000;
+  const local = options.provider === 'local';
+  const idleMs = options.idleTimeoutMs ?? (local ? 600_000 : 120_000);
   const maxAttempts = Math.max(1, options.maxAttempts ?? 3);
   const baseMs = options.retryBaseMs ?? 500;
   // Retry only until output reaches the caller: replaying a stream that has
@@ -164,10 +194,10 @@ export async function streamAgent(
 
     rearm();
     try {
-      const resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      const resp = await fetch(local ? LOCAL_URL : OPENROUTER_URL, {
         method: 'POST',
         signal: controller.signal,
-        headers: {
+        headers: local ? { 'Content-Type': 'application/json' } : {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${key}`,
           'HTTP-Referer': 'https://strophae.app',
@@ -176,7 +206,7 @@ export async function streamAgent(
         body: JSON.stringify({
           model: slug,
           stream: true,
-          messages,
+          messages: local ? withoutFiles(messages) : messages,
           ...requestModalities(options.modality ?? 'text'),
         }),
       });

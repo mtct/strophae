@@ -46,8 +46,10 @@ screenshots there — handy when your change is visual.
 - **The renderer is sandboxed.** `contextIsolation` and `sandbox` are on,
   there is no `nodeIntegration`, and the renderer reaches the main process
   only through the typed preload bridge (`window.strophae`). The CSP in
-  `src/renderer/index.html` limits `connect-src` to openrouter.ai — the app
-  has no other network egress, and it should stay that way.
+  `src/renderer/index.html` limits `connect-src` to openrouter.ai and the
+  `strophae-local:` scheme, which the main process forwards only to a local
+  model server on the private network — the app has no other network
+  egress, and it should stay that way.
 - **Model output is untrusted.** Markdown is rendered without `rehype-raw`,
   so raw HTML in a reply is escaped rather than parsed; mermaid runs with
   `securityLevel: strict`, `htmlLabels` off and a DOMPurify pass. Please

@@ -3,7 +3,7 @@
 // modal); these are only the seed defaults, ported from the retired
 // Django settings.
 
-import type { Modality, ModelEntry } from './types';
+import type { Modality, ModelEntry, Provider } from './types';
 
 export const DEFAULT_MODELS: ModelEntry[] = [
   { label: 'GPT-4o', slug: 'openai/gpt-4o' },
@@ -29,6 +29,72 @@ export function modelSlug(label: string, models: ModelEntry[] = []): string {
   return models.find((m) => m.label === label)?.slug
     ?? DEFAULT_MODELS.find((m) => m.label === label)?.slug
     ?? label;
+}
+
+/** Where a label's requests go, and the model string they carry. A label no
+    longer configured falls back as modelSlug does — to OpenRouter. */
+export function modelRoute(label: string, models: ModelEntry[] = [])
+    : { slug: string; provider: Provider } {
+  const entry = models.find((m) => m.label === label);
+  return {
+    slug: modelSlug(label, models),
+    provider: entry?.provider ?? 'openrouter',
+  };
+}
+
+// ------------------------------------------------------------ local server
+
+/** Ollama's OpenAI-compatible endpoint, the most common local server. */
+export const DEFAULT_LOCAL_SERVER = 'http://localhost:11434/v1';
+
+/** The scheme the renderer calls a local model through. The main process
+    answers it (src/main/local.ts) by forwarding to the configured server,
+    so the renderer's CSP still names no host but OpenRouter, and no local
+    server has to be told to allow CORS. */
+export const LOCAL_SCHEME = 'strophae-local';
+
+/** Tidy a pasted address: trimmed, no trailing slash, and the /v1 every
+    OpenAI-compatible server (Ollama, LM Studio, llama.cpp, vLLM) serves
+    under when the person gave just host and port. */
+export function normalizeLocalServer(url: string): string {
+  const trimmed = url.trim().replace(/\/+$/, '');
+  try {
+    const parsed = new URL(trimmed);
+    return parsed.pathname === '/' ? `${trimmed}/v1` : trimmed;
+  } catch {
+    return trimmed;
+  }
+}
+
+/** Whether `url` is a server on this machine or the private network —
+    loopback, a private or link-local address, or a LAN name (one label, or
+    .local / .lan / .home.arpa / .internal). Anything else would turn the
+    "local" server into a way to send conversations to the internet past
+    the renderer's CSP, so it is refused here and again in the main
+    process. */
+export function isLocalServer(url: string): boolean {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return false;
+  }
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return false;
+  if (parsed.username || parsed.password) return false;
+  const host = parsed.hostname.toLowerCase().replace(/^\[|\]$/g, '');
+  if (host.includes(':')) {
+    // IPv6: loopback, unique-local (fc00::/7), link-local (fe80::/10).
+    return host === '::1' || /^f[cd]/.test(host) || /^fe[89ab]/.test(host);
+  }
+  const v4 = host.match(/^(\d+)\.(\d+)\.(\d+)\.(\d+)$/);
+  if (v4) {
+    const a = Number(v4[1]);
+    const b = Number(v4[2]);
+    return a === 127 || a === 10 || (a === 172 && b >= 16 && b <= 31)
+      || (a === 192 && b === 168) || (a === 169 && b === 254);
+  }
+  return !host.includes('.')
+    || /\.(localhost|local|lan|home\.arpa|internal)$/.test(host);
 }
 
 /** Heuristic for diffusion/image-output models: when it matches, requests

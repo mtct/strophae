@@ -9,8 +9,8 @@ import { join } from 'node:path';
 import { deleteAttachmentFiles, sweepAttachments } from './attachments';
 import { CATALOGS, translate, type Lang } from '../shared/i18n';
 import {
-  DEFAULT_AGENT, DEFAULT_MODELS, defaultModality, modelSlug, nextHue,
-  titleFrom,
+  DEFAULT_AGENT, DEFAULT_LOCAL_SERVER, DEFAULT_MODELS, defaultModality,
+  isLocalServer, modelSlug, nextHue, normalizeLocalServer, titleFrom,
 } from '../shared/models';
 import { MEDIA_PERSONAS, SIX_HATS, type SeedPersona } from '../shared/personas';
 
@@ -67,7 +67,7 @@ const EMPTY: Data = {
   nextId: 1,
   conversations: [],
   personas: [],
-  settings: { language: '', models: [] },
+  settings: { language: '', models: [], localServer: DEFAULT_LOCAL_SERVER },
 };
 
 export class Store {
@@ -165,6 +165,8 @@ export class Store {
     if (!data.settings.models?.length) {
       data.settings.models = structuredClone(DEFAULT_MODELS);
     }
+    // ...and those predating local models, Ollama's address.
+    data.settings.localServer ??= DEFAULT_LOCAL_SERVER;
     // Documents predating per-persona modality: infer it from the model
     // slug (same heuristic the old image-only path used), then freeze it.
     const models = data.settings.models;
@@ -577,10 +579,22 @@ export class Store {
       const slug = m.slug.trim();
       if (!label || !slug || seen.has(label)) continue;
       seen.add(label);
-      clean.push({ label, slug });
+      clean.push(m.provider === 'local'
+        ? { label, slug, provider: 'local' }
+        : { label, slug });
     }
     if (clean.length === 0) throw new Error('need_one_model');
     this.data.settings.models = clean;
+    this.save();
+    return this.data.settings;
+  }
+
+  /** Point local models at a server (Settings modal Save). Only one on
+      this machine or the private network: see isLocalServer. */
+  setLocalServer(url: string): Settings {
+    const clean = normalizeLocalServer(url);
+    if (!isLocalServer(clean)) throw new Error('local_url_invalid');
+    this.data.settings.localServer = clean;
     this.save();
     return this.data.settings;
   }

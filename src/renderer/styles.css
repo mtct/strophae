@@ -83,7 +83,8 @@ body {
 .modal label,
 button.accent,
 .card-actions button,
-.attach-btn {
+.attach-btn,
+.model-row .model-tag {
   font-family: var(--display);
   text-transform: lowercase;
   letter-spacing: 0.13em;
@@ -809,7 +810,8 @@ textarea::placeholder { font-style: normal; }
   justify-content: center;
 }
 .modal {
-  width: 460px;
+  /* Wide enough for the add-model row: provider, name, model string, +. */
+  width: 500px;
   /* Taller than a small window now that it carries the MCP lines. */
   max-height: calc(100vh - 48px);
   overflow-y: auto;
@@ -821,6 +823,9 @@ textarea::placeholder { font-style: normal; }
   flex-direction: column;
   gap: 9px;
 }
+/* Scroll the sheet, never squeeze what is on it: a flex column would
+   otherwise shrink the model lists to slivers before it overflowed. */
+.modal > * { flex-shrink: 0; }
 .modal h2 {
   font-family: var(--display);
   font-size: 21px;
@@ -884,10 +889,28 @@ textarea::placeholder { font-style: normal; }
   max-width: 55%;
 }
 .model-row .chip-x:disabled { color: var(--rule-soft); cursor: default; background: transparent; }
+/* A model served by the local server: its provider, printed as chrome. */
+.model-row .model-tag {
+  flex: none;
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  border: var(--key) solid var(--ink-soft);
+  padding: 0 5px;
+}
 .model-add { display: flex; gap: 6px; }
 .model-add input { flex: 1; min-width: 0; }
 .model-add input.mono { font-family: var(--mono); font-size: 11.5px; flex: 1.4; }
+.model-add select.provider { flex: none; width: 112px; }
 .model-add button { width: 34px; flex: none; padding: 6px 0; }
+
+/* The local model server: its address, and what "find models" turned up. */
+.local-row { display: flex; gap: 6px; }
+.local-row input { flex: 1; min-width: 0; font-family: var(--mono); font-size: 11.5px; }
+.local-row button { flex: none; }
+.found-models { max-height: 132px; }
+/* Said plainly in ink rather than red: red is the one stamped control. */
+.modal .hint.problem { color: var(--ink); font-weight: 600; }
 
 /* The lines a local MCP client is configured with. The app prints them, so
    a plain sheet, not a writing surface: mono, scrolled rather than wrapped,

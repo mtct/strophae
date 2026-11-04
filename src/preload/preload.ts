@@ -29,6 +29,8 @@ const api = {
   detachFromAgent: invoke('agent:detach'),
   setLanguage: invoke('settings:setLanguage'),
   setModels: invoke('settings:setModels'),
+  setLocalServer: invoke('settings:setLocalServer'),
+  localModels: invoke('local:models'),
   getApiKey: invoke('apikey:get'),
   setApiKey: invoke('apikey:set'),
   openExternal: invoke('shell:openExternal'),
@@ -45,6 +47,7 @@ const api = {
   checkShot: invoke('check:shot'),
   checkReady: invoke('check:ready'),
   checkMcp: invoke('check:mcp'),
+  checkLocalServer: invoke('check:localServer'),
 };
 
 export type StrophaeApi = typeof api;

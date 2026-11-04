@@ -66,16 +66,26 @@ export interface Persona {
 
 export type Language = '' | 'en' | 'it'; // '' = follow the OS
 
-// One selectable model: display label + the OpenRouter model string sent
-// as `model` in chat/completions (e.g. "openai/gpt-4o").
+// Where a model runs: OpenRouter, or the local OpenAI-compatible server
+// (Ollama, LM Studio, llama.cpp…) set in Settings.
+export type Provider = 'openrouter' | 'local';
+
+// One selectable model: display label + the model string sent as `model` in
+// chat/completions — an OpenRouter id ("openai/gpt-4o") or, for a local
+// model, the server's own name for it ("qwen3:8b").
 export interface ModelEntry {
   label: string;
   slug: string;
+  provider?: Provider; // absent = OpenRouter (every document before local)
 }
 
 export interface Settings {
   language: Language;
   models: ModelEntry[]; // user-editable; seeded from DEFAULT_MODELS
+  /** Base URL of the local server's OpenAI-compatible API, e.g. Ollama's
+      http://localhost:11434/v1. Only ever this machine or the private
+      network (isLocalServer). */
+  localServer: string;
 }
 
 export interface AppState {
@@ -99,6 +109,11 @@ export interface McpChange {
   convId?: number;
   personas?: boolean;
 }
+
+// What the Settings modal's "find models" got back from the local server.
+export type LocalModels =
+  | { ok: true; url: string; models: string[] }
+  | { ok: false; url: string; error: 'local_unreachable' | 'local_url_invalid' };
 
 // The command a local MCP client runs to reach the app — shown in Settings
 // as the snippet to paste into the client's configuration.

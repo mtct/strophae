@@ -7,15 +7,21 @@
 //
 // The main process also serves the MCP endpoint local clients compose the
 // council through (mcp.ts, mcp-tools.ts); their bridge starts the app when
-// it is not running.
+// it is not running. And it carries the requests to local models (local.ts).
 
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { createServer, type Server } from 'node:http';
+import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { app, BrowserWindow, ipcMain, session } from 'electron';
+import {
+  app, BrowserWindow, ipcMain, net, protocol, session,
+} from 'electron';
 
+import { LOCAL_SCHEME } from '../shared/models';
 import { registerIpc } from './ipc';
+import { forwardToLocal } from './local';
 import { exchange, mcpEndpoint, McpSession, serveMcp } from './mcp';
 import { COUNCIL_INSTRUCTIONS, councilTools } from './mcp-tools';
 import { Store } from './store';
@@ -38,6 +44,17 @@ if (CHECK) {
 // profile never contends with a copy the developer has open.
 const primary = app.requestSingleInstanceLock();
 if (!primary) app.quit();
+
+// Local models are fetched from the renderer as strophae-local://server/…
+// and answered below (local.ts). Privileged before ready: fetch() must be
+// allowed on it, and the reply must stream rather than arrive whole.
+protocol.registerSchemesAsPrivileged([{
+  scheme: LOCAL_SCHEME,
+  privileges: {
+    standard: true, secure: true, supportFetchAPI: true, corsEnabled: true,
+    stream: true,
+  },
+}]);
 
 let store: Store;
 
@@ -87,6 +104,8 @@ app.whenReady().then(() => {
   const dir = app.getPath('userData');
   store = new Store(dir, osLanguage());
   registerIpc(store, dir, osLanguage(), { ephemeralKey: CHECK });
+  protocol.handle(LOCAL_SCHEME, (request) => forwardToLocal(
+    request, store.settings().localServer, store.lang(), net.fetch));
 
   // The self-test serves MCP from its throwaway profile, clear of the
   // endpoint a running copy of the app holds.
@@ -140,6 +159,15 @@ app.whenReady().then(() => {
         store.flush();
         app.exit(ok ? 0 : 1);
       });
+    // A stand-in local model server, OpenAI-compatible like Ollama: it
+    // lists one model and streams a short reply, so the walk can add a
+    // local model from Settings and hear it answer with no key set.
+    const fakeLocal = checkLocalServer();
+    ipcMain.handle('check:localServer', async () => {
+      const server = await fakeLocal;
+      const { port } = server.address() as AddressInfo;
+      return `http://127.0.0.1:${port}`;
+    });
     // A client composing a council, end to end: over the socket, through
     // the tools, back to the window as a push.
     ipcMain.handle('check:mcp', () => exchange(endpoint, [
@@ -173,12 +201,42 @@ app.whenReady().then(() => {
   } else {
     ipcMain.handle('check:ready', () => undefined);
     ipcMain.handle('check:mcp', () => undefined);
+    ipcMain.handle('check:localServer', () => undefined);
   }
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
 });
+
+/** The self-test's local model server: Ollama's OpenAI-compatible routes,
+    answering with canned data. */
+function checkLocalServer(): Promise<Server> {
+  const server = createServer((req, res) => {
+    if (req.method === 'GET' && req.url === '/v1/models') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ data: [{ id: 'check-local:1b' }] }));
+      return;
+    }
+    if (req.method !== 'POST' || req.url !== '/v1/chat/completions') {
+      res.writeHead(404).end();
+      return;
+    }
+    req.resume();
+    res.writeHead(200, { 'Content-Type': 'text/event-stream' });
+    const words = ['a ', 'local ', 'voice ', 'answers'];
+    const next = () => {
+      const word = words.shift();
+      if (word === undefined) return res.end('data: [DONE]\n\n');
+      res.write(`data: ${JSON.stringify(
+        { choices: [{ delta: { content: word } }] })}\n\n`);
+      setTimeout(next, 60);
+    };
+    next();
+  });
+  return new Promise((resolve) =>
+    server.listen(0, '127.0.0.1', () => resolve(server)));
+}
 
 // A second launch hands over to this one: bring its window forward.
 app.on('second-instance', () => {
