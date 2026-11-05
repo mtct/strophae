@@ -24,3 +24,6 @@ release/
 .specify/
 .claude/skills/
 .claude/settings.local.json
+
+# brag plugin output (generated locally)
+brag-output/
